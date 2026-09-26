@@ -1,52 +1,39 @@
-# AI Writing Assessment Platform — Step 85 integration candidate
+# AI Writing Assessment Platform — Development repository
 
-**Status:** Development candidate. Tested pure domain/policy contracts and synthetic-only offline checks; **a live NestJS/PostgreSQL migration and HTTP E2E result has not been observed in this sandbox**. No real AI grading is configured. Do **not** upload actual children's writing or use production credentials.
+**Current stage:** Step 86 (secure backend integration). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
-Includes an implementation foundation for a typed-writing workflow: identity, program-scoped enrollment, reviewed processing authority, approved rubric/topic snapshots, immutable verified text, pending assessment and transactional outbox. The AI examiner/verifier deliberately do not output fabricated scores.
+## Project documentation
 
-## Integration additions in Step 85
+- [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
+- [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
+- [Detailed later-stage decisions, Steps 73–82](docs/architecture-steps-73-82.md)
+- [Current actual test evidence and remaining release blockers](docs/implementation-status.md)
+- [Step 86 authentication hardening and current plan](docs/step86-auth-integration.md)
+- [Historical Step 83/84 source snapshots](history/README.md)
 
-- PostgreSQL integration suite covering migration constraints, immutable records, exact program scope and outbox rollback. Requires a disposable `*_test` database.
-- Synthetic loopback HTTP E2E for registration, scoped academic setup, durable typed submission, idempotent retries, cross-student access, and refresh-token replay handling.
-- GitHub Actions pipeline that provisions ephemeral PostgreSQL, installs dependencies, runs Prisma migrations, builds/typechecks the API and runs the HTTP smoke test. **Observe actual Actions results before claiming integration passed.**
-- Fix for parallel refresh-token replay: a failed concurrent claim now triggers an audited session-family revocation in a separate transaction.
-- Static-only offline sanity checks. Their passing is not evidence that Prisma/PostgreSQL/NestJS integration works.
+**History limitation:** The verbatim original Steps 1–60 were not recoverable; their known decisions are preserved by the corrected v2 audit, not misrepresented as full original transcripts. New detailed work is recorded from Step 73 onward.
 
-## Local development (synthetic data only)
+## Implemented development features
 
-Requires Node >=22.16, npm, Python >=3.11, Docker with Compose, and an internet connection for first dependency installation.
+- TypeScript rubric scoring, Unicode-grounded evidence validation and fail-closed finalization boundary.
+- NestJS identity/session, program-enrollment/guardian policy, published academic topics/rubrics and durable typed-writing submission.
+- Immutable verified writing and topic/rubric snapshots, transactional outbox and idempotent student submission.
+- Shared PostgreSQL authentication abuse budgets with hashed-only keys (Step 86).
+- FastAPI AI boundary intentionally reports unavailable until real examiner/verifier integration exists; no sample scores are presented as AI results.
+
+## Synthetic-only developer setup
+
+Node >=22.16, npm, Python >=3.11 and isolated PostgreSQL required. Use only a disposable database whose name ends `_test` for integration tests. Never copy a production database into CI.
 
 ```sh
 cp .env.example .env
-# Set a unique strong JWT_SECRET in .env; the example is NEVER production-safe.
-set -a; . ./.env; set +a
+# Replace all example secrets before any real environment or shared deployment.
 npm install
-python -m pip install -e 'apps/ai-service[test]'
-./scripts/check-step85.sh
-```
-
-### Live integration (dedicated disposable test database)
-
-Use a separate PostgreSQL database **named ending `_test`**, migrate it first, then run the opt-in DB suite. The GitHub Actions workflow does this on every proposed change:
-
-```sh
-# Configure DATABASE_URL for e.g. writing_test; do NOT use writing_dev or any real data.
+npm test
 npm --workspace apps/api run db:generate
 npm --workspace apps/api run typecheck
 npm --workspace apps/api run db:migrate
 RUN_POSTGRES_INTEGRATION=1 npm --workspace apps/api run test:db
 ```
 
-For the HTTP smoke, create a synthetic admin with `LOCAL_PROVISION_ACK=ONLY_SYNTHETIC_TEST_DATA`, `LOCAL_PROVISION_EMAIL`, `LOCAL_PROVISION_PASSWORD`, `LOCAL_PROVISION_ROLE=SUPER_ADMIN`; run the API on loopback and execute:
-
-```sh
-STEP85_SYNTHETIC_ACK=ONLY_SYNTHETIC_TEST_DATA npm run smoke:http
-```
-
-The HTTP script rejects remote and production targets, makes uniquely named synthetic fixtures, and asserts assessment status `AWAITING_UNDERSTANDING`, never fake final scores. The test database is disposable; do not promote it to production.
-
-## Release blockers
-
-Full runtime/typecheck and live PostgreSQL integration must pass in an actual dependency-enabled environment, a committed lockfile is required for reproducible CI, and auth rate limiting/abuse protection, real guardian identity verification and independent AI assessment quality gates remain outstanding. Step 85 is **not production approval**.
-
-See `docs/step85-integration.md` for scope and verification ledger.
+Review `.github/workflows/step85-integration.yml` and `docs/implementation-status.md` for exact tested CI execution. The active workflow is named for Step 85 for historical continuity; Step 86 extends it. No production deployment is configured.
