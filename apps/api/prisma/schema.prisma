@@ -303,6 +303,7 @@ model Assessment {
   feedbackProjection FeedbackProjection?
   practiceProjection PracticeProjection?
   progressProjection ProgressProjection?
+  reportSnapshots ReportSnapshot[]
   // Published scores are possible only through the Step88 guarded transaction and DB trigger.
 }
 model OutboxEvent {
@@ -451,6 +452,7 @@ model AssessmentScoreRevision {
   feedbackUses FeedbackProjection[]
   practiceUses PracticeProjection[]
   progressUses ProgressProjection[]
+  reportUses ReportSnapshot[]
   @@unique([examinerRunId])
 }
 
@@ -569,5 +571,21 @@ model ProgressProjection {
   updatedAt DateTime @default(now())
   assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
   scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@index([scoreRevisionId])
+}
+
+/** Snapshots are immutable as-of. Raw PDF bytes are NOT stored here. */
+model ReportSnapshot {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  scoreRevisionId String @db.Uuid
+  formatVersion String
+  snapshot Json
+  snapshotHash String @db.VarChar(64)
+  createdById String @db.Uuid
+  createdAt DateTime @default(now())
+  assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
+  scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@unique([assessmentId,scoreRevisionId,formatVersion])
   @@index([scoreRevisionId])
 }
