@@ -1,0 +1,11 @@
+import {Body,Controller,Get,Inject,Param,ParseUUIDPipe,Post,Req,UseGuards} from '@nestjs/common';
+import {JwtGuard,type AuthenticatedRequest} from '../auth/jwt.guard.ts';
+import {SubmissionService} from './submission.service.ts';
+import {CreateTypedSubmissionDto} from './submission.dto.ts';
+@Controller('submissions') @UseGuards(JwtGuard)
+export class SubmissionController {
+  constructor(@Inject(SubmissionService) private readonly submissions:SubmissionService){}
+  @Post('typed') create(@Req() req:AuthenticatedRequest,@Body() dto:CreateTypedSubmissionDto){return this.submissions.createTyped(req.actor,dto);}
+  @Get('mine') list(@Req() req:AuthenticatedRequest){return this.submissions.listMine(req.actor);}
+  @Get('mine/:id') get(@Req() req:AuthenticatedRequest,@Param('id',new ParseUUIDPipe()) id:string){return this.submissions.findMine(req.actor,id);}
+}

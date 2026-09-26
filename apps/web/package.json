@@ -1,0 +1,7 @@
+{
+  "name":"@writing/web",
+  "private":true,
+  "version":"0.0.0",
+  "type":"module",
+  "description":"Placeholder workspace; Next.js frontend not implemented until its own milestone"
+}

@@ -1,0 +1,29 @@
+{
+  "name": "ai-writing-platform-step84",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Step 84 backend source increment with tested framework-free authorization policies for the AI Writing Assessment Platform",
+  "workspaces": [
+    "packages/*",
+    "apps/api",
+    "apps/worker",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22.16"
+  },
+  "scripts": {
+    "test:domain": "node --experimental-strip-types --test packages/domain/test/*.test.ts",
+    "demo": "node --experimental-strip-types scripts/typed-slice-demo.ts",
+    "test:policies": "node --experimental-strip-types --test apps/api/test/policies.test.ts",
+    "test": "npm run test:domain && npm run test:policies",
+    "test:python": "cd apps/ai-service && python -m pytest -q",
+    "typecheck:api": "npm --workspace apps/api run typecheck",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "type": "module",
+  "devDependencies": {
+    "typescript": "^5.8.3",
+    "@types/node": "^22.15.0"
+  }
+}

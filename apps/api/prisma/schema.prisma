@@ -1,0 +1,307 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  PARENT
+  TEACHER
+  ACADEMIC_ADMIN
+  SUPER_ADMIN
+}
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+enum ProgramStatus {
+  ACTIVE
+  ARCHIVED
+}
+enum EnrollmentStatus {
+  ACTIVE
+  ENDED
+}
+enum GuardianLinkStatus {
+  PENDING
+  VERIFICATION_REQUIRED
+  VERIFIED
+  ACTIVE
+  SUSPENDED
+  REVOKED
+}
+enum AuthorityStatus {
+  ACTIVE
+  WITHDRAWN
+  EXPIRED
+}
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+enum Language {
+  BANGLA
+  ENGLISH
+}
+enum SubmissionStatus {
+  ACCEPTED
+  CANCELLED
+}
+enum AssessmentStatus {
+  AWAITING_UNDERSTANDING
+  UNDERSTANDING_READY
+  EXAMINER_PENDING
+  VERIFIER_PENDING
+  HUMAN_REVIEW
+  FINALIZED
+  FAILED
+}
+enum OutboxStatus {
+  PENDING
+  DISPATCHING
+  DISPATCHED
+}
+// Pseudonymous, shared per-endpoint fixed-window budgets. Never persist raw IP/email.
+model AuthRateWindow {
+  bucketKey   String   @id @db.VarChar(64)
+  attempts    Int
+  windowStart DateTime
+  resetAt     DateTime
+  @@index([resetAt])
+}
+
+model User {
+  id                 String             @id @default(uuid()) @db.Uuid
+  email              String             @unique
+  passwordHash       String
+  role               UserRole
+  status             UserStatus         @default(ACTIVE)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  student            Student?
+  sessions           AuthSession[]
+  guardianLinks      ParentStudentLink[] @relation("Guardian")
+  teacherAssignments TeacherBatch[]     @relation("AssignedTeacher")
+}
+model AuthSession {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid
+  createdAt    DateTime           @default(now())
+  revokedAt    DateTime?
+  expiresAt    DateTime
+  user         User               @relation(fields: [userId], references: [id], onDelete: Restrict)
+  refreshTokens AuthRefreshToken[]
+  @@index([userId, revokedAt])
+}
+model AuthRefreshToken {
+  id         String      @id @default(uuid()) @db.Uuid
+  sessionId  String      @db.Uuid
+  tokenHash  String      @unique @db.VarChar(64)
+  issuedAt   DateTime    @default(now())
+  consumedAt DateTime?
+  revokedAt  DateTime?
+  expiresAt  DateTime
+  session    AuthSession @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+  @@index([sessionId, consumedAt])
+}
+model Student {
+  id          String                @id @default(uuid()) @db.Uuid
+  userId      String                @unique @db.Uuid
+  createdAt   DateTime              @default(now())
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Restrict)
+  enrollments Enrollment[]
+  submissions Submission[]
+  guardianLinks ParentStudentLink[]
+  authorities ProcessingAuthority[]
+}
+model AcademicProgram {
+  id          String            @id @default(uuid()) @db.Uuid
+  code        String            @unique
+  name        String
+  status      ProgramStatus     @default(ACTIVE)
+  batches     Batch[]
+  enrollments Enrollment[]
+  guardianLinks ParentStudentLink[]
+  authorities ProcessingAuthority[]
+  topics      WritingTopicVersion[]
+  rubrics     RubricVersion[]
+  bindings   RubricBinding[]
+  submissions Submission[]
+}
+model Batch {
+  id         String @id @default(uuid()) @db.Uuid
+  programId  String @db.Uuid
+  name       String
+  active     Boolean @default(true)
+  program    AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  enrollments Enrollment[]
+  teachers   TeacherBatch[]
+  submissions Submission[]
+  @@unique([programId, name], map: "Batch_program_name_unique")
+  @@unique([id, programId], map: "Batch_id_program_unique")
+}
+model Enrollment {
+  id         String @id @default(uuid()) @db.Uuid
+  studentId  String @db.Uuid
+  programId  String @db.Uuid
+  batchId    String @db.Uuid
+  status     EnrollmentStatus @default(ACTIVE)
+  startedAt  DateTime @default(now())
+  endedAt    DateTime?
+  student    Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  program    AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  batch      Batch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  @@index([studentId, programId, status])
+  @@index([batchId, status])
+}
+model TeacherBatch {
+  id         String @id @default(uuid()) @db.Uuid
+  teacherId  String @db.Uuid
+  batchId    String @db.Uuid
+  assignedAt DateTime @default(now())
+  endedAt    DateTime?
+  teacher    User @relation("AssignedTeacher", fields: [teacherId], references: [id], onDelete: Restrict)
+  batch      Batch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  @@index([teacherId, endedAt])
+}
+model ParentStudentLink {
+  id          String @id @default(uuid()) @db.Uuid
+  guardianId  String @db.Uuid
+  studentId   String @db.Uuid
+  programId   String @db.Uuid
+  status      GuardianLinkStatus @default(PENDING)
+  verifiedAt  DateTime?
+  activatedAt DateTime?
+  revokedAt   DateTime?
+  approvedById String? @db.Uuid
+  guardian    User @relation("Guardian", fields: [guardianId], references: [id], onDelete: Restrict)
+  student     Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  program     AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  @@unique([guardianId, studentId, programId], map: "ParentStudentLink_unique")
+  @@index([studentId, programId, status])
+}
+model ProcessingAuthority {
+  id             String @id @default(uuid()) @db.Uuid
+  studentId      String @db.Uuid
+  programId      String @db.Uuid
+  purpose        String
+  legalBasis     String
+  policyVersion  String
+  status         AuthorityStatus @default(ACTIVE)
+  approvedById   String @db.Uuid
+  approvedAt     DateTime @default(now())
+  endedAt        DateTime?
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  @@index([studentId, programId, purpose, status])
+}
+model WritingTopicVersion {
+  id         String @id @default(uuid()) @db.Uuid
+  programId  String @db.Uuid
+  writingType String
+  language   Language
+  title      String
+  instructions String
+  clues      Json
+  status     PublicationStatus @default(DRAFT)
+  createdAt  DateTime @default(now())
+  program    AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  submissions Submission[]
+  @@index([programId, language, writingType, status])
+}
+model RubricVersion {
+  id          String @id @default(uuid()) @db.Uuid
+  programId   String @db.Uuid
+  writingType String
+  language    Language
+  version     Int
+  status      PublicationStatus @default(DRAFT)
+  snapshot    Json
+  snapshotHash String @db.VarChar(64)
+  createdAt   DateTime @default(now())
+  publishedAt DateTime?
+  program     AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  binding    RubricBinding[]
+  submissions Submission[]
+  @@unique([programId, writingType, language, version], map: "RubricVersion_scope_version_unique")
+}
+model RubricBinding {
+  id         String @id @default(uuid()) @db.Uuid
+  programId  String @db.Uuid
+  writingType String
+  language   Language
+  rubricVersionId String @db.Uuid
+  updatedAt  DateTime @updatedAt
+  program    AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  rubric     RubricVersion @relation(fields: [rubricVersionId], references: [id], onDelete: Restrict)
+  @@unique([programId, writingType, language], map: "RubricBinding_scope_unique")
+}
+model Submission {
+  id            String @id @default(uuid()) @db.Uuid
+  studentId     String @db.Uuid
+  programId     String @db.Uuid
+  batchId       String @db.Uuid
+  topicVersionId String @db.Uuid
+  rubricVersionId String @db.Uuid
+  clientRequestId String @db.Uuid
+  topicSnapshot Json
+  rubricSnapshot Json
+  topicHash      String @db.VarChar(64)
+  rubricHash     String @db.VarChar(64)
+  status         SubmissionStatus @default(ACCEPTED)
+  createdAt      DateTime @default(now())
+  student        Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
+  batch          Batch @relation(fields: [batchId], references: [id], onDelete: Restrict)
+  topic          WritingTopicVersion @relation(fields: [topicVersionId], references: [id], onDelete: Restrict)
+  rubric         RubricVersion @relation(fields: [rubricVersionId], references: [id], onDelete: Restrict)
+  verifiedText   VerifiedWritingText?
+  assessment     Assessment?
+  @@unique([studentId, clientRequestId], map: "Submission_student_request_unique")
+  @@index([studentId, programId, createdAt])
+}
+model VerifiedWritingText {
+  id           String @id @default(uuid()) @db.Uuid
+  submissionId String @unique @db.Uuid
+  language     Language
+  content      String @db.Text
+  contentHash  String @db.VarChar(64)
+  verifiedAt   DateTime @default(now())
+  verifiedById String @db.Uuid
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+}
+model Assessment {
+  id           String @id @default(uuid()) @db.Uuid
+  submissionId String @unique @db.Uuid
+  status       AssessmentStatus @default(AWAITING_UNDERSTANDING)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
+  // No scores or AI verification records in this milestone; never fabricate a result.
+}
+model OutboxEvent {
+  id           String @id @default(uuid()) @db.Uuid
+  eventType    String
+  dedupeKey    String @unique
+  payload      Json
+  status       OutboxStatus @default(PENDING)
+  attemptCount Int @default(0)
+  lockedAt     DateTime?
+  dispatchedAt DateTime?
+  createdAt    DateTime @default(now())
+  @@index([status, createdAt])
+}
+model AuditEvent {
+  id           String @id @default(uuid()) @db.Uuid
+  actorId      String? @db.Uuid
+  action       String
+  resourceType String
+  resourceId   String
+  details      Json?
+  createdAt    DateTime @default(now())
+  @@index([resourceType, resourceId, createdAt])
+}

@@ -1,0 +1,32 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {guardianCanRead,teacherCanRead,activeEnrollment,coreAssessmentAuthorized} from '../src/policies/access-policy.ts';
+import {assertTypedSubmissionEligible, canonicalJson} from '../src/policies/submission-policy.ts';
+import type {PublishedRubric} from '../../../packages/domain/src/index.ts';
+
+const now = new Date('2026-09-26T10:00:00Z');
+const before = new Date('2026-09-01T00:00:00Z');
+const after = new Date('2026-10-01T00:00:00Z');
+const enrollment = {studentId:'s1',programId:'writing',batchId:'b1',status:'ACTIVE' as const,startedAt:before,endedAt:null};
+const guardian = {guardianId:'g1',studentId:'s1',programId:'writing',status:'ACTIVE',verifiedAt:before,activatedAt:before,revokedAt:null};
+const teacher = {teacherId:'t1',batchId:'b1',programId:'writing',assignedAt:before,endedAt:null};
+const authority = {studentId:'s1',programId:'writing',purpose:'CORE_ASSESSMENT',status:'ACTIVE',approvedAt:before,endedAt:null};
+const rubric: PublishedRubric = {id:'r',versionId:'v1',status:'PUBLISHED',scoreStep:'1',totalMarks:'1',factors:[{id:'f',name:'Content',maxScore:'1',criteria:[{id:'c0',score:'0',description:'Missing'},{id:'c1',score:'1',description:'Present'}]}]};
+const eligible = () => ({studentId:'s1',programId:'writing',batchId:'b1',enrollment,authority,programActive:true,batchActive:true,topic:{programId:'writing',language:'ENGLISH',writingType:'PARAGRAPH',status:'PUBLISHED'},rubric:{programId:'writing',language:'ENGLISH',writingType:'PARAGRAPH',status:'PUBLISHED',snapshot:rubric},boundRubricVersionId:'v1',selectedRubricVersionId:'v1',text:'My example paragraph is long enough.',now});
+
+test('verified active guardian can read correct student and exact program',()=>assert.equal(guardianCanRead('PARENT','g1','s1','writing',guardian,now),true));
+test('guardian cannot read a second child',()=>assert.equal(guardianCanRead('PARENT','g1','s2','writing',guardian,now),false));
+test('guardian cannot cross program boundary',()=>assert.equal(guardianCanRead('PARENT','g1','s1','main',guardian,now),false));
+test('unverified or revoked guardian is denied',()=>{assert.equal(guardianCanRead('PARENT','g1','s1','writing',{...guardian,verifiedAt:null},now),false);assert.equal(guardianCanRead('PARENT','g1','s1','writing',{...guardian,revokedAt:before},now),false);});
+test('teacher reads assigned student only in correct active cohort',()=>assert.equal(teacherCanRead('TEACHER','t1','s1','writing','b1',teacher,enrollment,now),true));
+test('teacher cannot cross cohort or program',()=>{assert.equal(teacherCanRead('TEACHER','t1','s1','writing','b2',teacher,enrollment,now),false);assert.equal(teacherCanRead('TEACHER','t1','s1','main','b1',teacher,enrollment,now),false);});
+test('revoked teacher assignment is denied',()=>assert.equal(teacherCanRead('TEACHER','t1','s1','writing','b1',{...teacher,endedAt:before},enrollment,now),false));
+test('future teacher assignment and ended enrollment are denied',()=>{assert.equal(teacherCanRead('TEACHER','t1','s1','writing','b1',{...teacher,assignedAt:after},enrollment,now),false);assert.equal(activeEnrollment({...enrollment,endedAt:before},'s1','writing','b1',now),false);});
+test('processing authority separate from guardian link',()=>{assert.equal(coreAssessmentAuthorized(authority,'s1','writing',now),true);assert.equal(coreAssessmentAuthorized({...authority,status:'WITHDRAWN'},'s1','writing',now),false);assert.equal(coreAssessmentAuthorized(authority,'s1','main',now),false);});
+test('typed submission eligible with exact topic/rubric/program',()=>assert.doesNotThrow(()=>assertTypedSubmissionEligible(eligible())));
+test('typed submission rejects missing consent/authority',()=>assert.throws(()=>assertTypedSubmissionEligible({...eligible(),authority:null}),{code:'NO_PROCESSING_AUTHORITY'}));
+test('typed submission rejects stale enrollment and archived program',()=>{assert.throws(()=>assertTypedSubmissionEligible({...eligible(),enrollment:{...enrollment,endedAt:before}}),{code:'NO_ACTIVE_ENROLLMENT'});assert.throws(()=>assertTypedSubmissionEligible({...eligible(),programActive:false}),{code:'NO_ACTIVE_ENROLLMENT'});});
+test('topic/rubric mismatches and stale binding are denied',()=>{assert.throws(()=>assertTypedSubmissionEligible({...eligible(),boundRubricVersionId:'stale'}),{code:'ACADEMIC_SCOPE_MISMATCH'});assert.throws(()=>assertTypedSubmissionEligible({...eligible(),topic:{...eligible().topic,language:'BANGLA'}}),{code:'ACADEMIC_SCOPE_MISMATCH'});});
+test('invalid and unapproved rubric cannot be used',()=>assert.throws(()=>assertTypedSubmissionEligible({...eligible(),rubric:{...eligible().rubric,snapshot:{...rubric,status:'DRAFT' as 'PUBLISHED'}}}),{code:'RUBRIC_NOT_PUBLISHED'}));
+test('no empty, null-byte or oversized submissions',()=>{assert.throws(()=>assertTypedSubmissionEligible({...eligible(),text:'hi'}),{code:'INVALID_WRITING'});assert.throws(()=>assertTypedSubmissionEligible({...eligible(),text:'Ten chars\u0000 more'}),{code:'INVALID_WRITING'});assert.throws(()=>assertTypedSubmissionEligible({...eligible(),text:'x'.repeat(12_001)}),{code:'INVALID_WRITING'});});
+test('canonical snapshot fingerprint ignores object key insertion order',()=>assert.equal(canonicalJson({a:1,b:{x:1,y:2}}),canonicalJson({b:{y:2,x:1},a:1})));
