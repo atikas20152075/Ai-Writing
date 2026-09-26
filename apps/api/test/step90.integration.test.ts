@@ -236,6 +236,9 @@ test('a new comparable assessment invalidates and proactively refreshes an older
   const stale=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
   assert.equal(stale.projections.find(x=>x.target==='PROGRESS')?.availability,'STALE');
   assert.equal((stale as any).learning.progress,null);
+  // Existing unsupported TEACHER/REPORT receipts are resolved before the idle
+  // cohort-refresh fallback is reached; no unsupported module can fake success.
+  for(let n=0;n<2;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'BLOCKED');
   const refreshed=await f.projections.processOne(f.assessment.id);
   assert.equal(refreshed.status,'REFRESHED');
   assert.equal(refreshed.target,'PROGRESS');
