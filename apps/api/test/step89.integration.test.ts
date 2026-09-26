@@ -183,4 +183,33 @@ test('UPHOLD closes finalized appeal without changing the effective score',{skip
    assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.a.id}}),0);
  });
 });
+
+test('SQL trigger denies direct self-approval even when bypassing the NestJS reviewer service',{skip:!enabled},async()=>{
+ await rollbackCase(async(tx,svc)=>{
+   const f=await fixture(tx);await flagged(tx,f);
+   const opened=await svc.open(actor(f.admin),f.a.id,reason);
+   const proposal=await svc.propose(actor(f.admin),opened.caseId,factors,reason);
+   await assert.rejects(tx.humanReviewDecision.create({data:{reviewCaseId:opened.caseId,
+     proposalId:proposal.proposalId,decidedById:f.admin.id,decision:'APPROVE',reason}}),
+     /STEP89_INVALID_REVIEW_DECISION/i);
+ });
+});
+test('PostgreSQL makes a submitted human scoring proposal permanently immutable',{skip:!enabled},async()=>{
+ await rollbackCase(async(tx,svc)=>{
+   const f=await fixture(tx);await flagged(tx,f);
+   const opened=await svc.open(actor(f.admin),f.a.id,reason);
+   const proposal=await svc.propose(actor(f.admin),opened.caseId,factors,reason);
+   await assert.rejects(tx.humanReviewProposal.update({where:{id:proposal.proposalId},
+     data:{reason:'Unauthorized mutation of immutable scoring rationale.'}}),/immutable/i);
+ });
+});
+test('an unrelated student cannot appeal a different students assessment',{skip:!enabled},async()=>{
+ await rollbackCase(async(tx,svc)=>{
+   const f=await fixture(tx);await finalizedAI(tx,f);
+   const stranger=await tx.user.create({data:{email:`unrelated-${randomUUID()}@example.test`,
+     passwordHash:'SYNTHETIC',role:'STUDENT'}});
+   await assert.rejects(svc.open(actor(stranger),f.a.id,reason),/not found|NotFound/i);
+   assert.equal(await tx.humanReviewCase.count({where:{assessmentId:f.a.id}}),0);
+ });
+});
 test.after(async()=>{if(db)await db.$disconnect();});
