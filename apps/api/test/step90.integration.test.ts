@@ -325,4 +325,38 @@ test('Step92 report denies another student even if an academic snapshot exists',
  });
 });
 
+
+test('Step92 guardian report requires verified live own-child link and current authority',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   const guardian=await tx.user.create({data:{email:`guardian-${randomUUID()}@example.test`,
+     role:'PARENT',passwordHash:'SYNTHETIC'}});
+   const other=await tx.user.create({data:{email:`guardian-out-${randomUUID()}@example.test`,
+     role:'PARENT',passwordHash:'SYNTHETIC'}});
+   const link=await tx.parentStudentLink.create({data:{studentId:f.student.id,
+     programId:f.program.id,guardianId:guardian.id,status:'ACTIVE',
+     verifiedAt:new Date(),activatedAt:new Date(),approvedById:f.a.id}});
+   const views=new AcademicViewsService({$transaction:async(cb:any)=>cb(tx)} as any);
+   await assert.rejects(views.currentReport(other.id,f.assessment.id,f.student.id),/Not Found|NotFound/i);
+   assert.equal((await views.currentReport(guardian.id,f.assessment.id,f.student.id)).status,'PENDING');
+   for(let n=0;n<6;n++)await f.projections.processOne(f.assessment.id);
+   assert.equal((await views.currentReport(guardian.id,f.assessment.id,f.student.id)).status,'CURRENT');
+   await tx.parentStudentLink.update({where:{id:link.id},
+     data:{status:'REVOKED',revokedAt:new Date()}});
+   await assert.rejects(views.currentReport(guardian.id,f.assessment.id,f.student.id),
+     /Not Found|NotFound/i);
+ });
+});
+test('Step92 report history is immutable after correction',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   for(let n=0;n<6;n++)await f.projections.processOne(f.assessment.id);
+   const old=await tx.academicReportSnapshot.findUniqueOrThrow({where:{
+     assessmentId_scoreRevisionId:{assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision}}});
+   await assert.rejects(tx.academicReportSnapshot.update({where:{id:old.id},
+     data:{snapshot:{schemaVersion:'academic-report-v1',revisionId:f.firstRevision,factors:[]}}}),
+      /STEP92_REPORT_SNAPSHOT_IMMUTABLE/);
+ });
+});
+
 test.after(async()=>{if(db)await db.$disconnect();});
