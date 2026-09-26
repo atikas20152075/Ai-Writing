@@ -1,0 +1,26 @@
+# Optional local dependencies. Docker was unavailable during Step 83 preparation.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: writing_dev
+      POSTGRES_PASSWORD: local_dev_only_change_me
+      POSTGRES_DB: writing_dev
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U writing_dev -d writing_dev"]
+      interval: 5s
+      retries: 12
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:6380:6379"
+    volumes:
+      - redisdata:/data
+volumes:
+  pgdata:
+  redisdata:

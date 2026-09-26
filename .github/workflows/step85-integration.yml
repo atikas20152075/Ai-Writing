@@ -1,0 +1,90 @@
+# Synthetic-only integration validation. Not an application deployment or production approval.
+name: Step 85 backend integration
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backend-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: writing_ci
+          POSTGRES_PASSWORD: synthetic_ci_password
+          POSTGRES_DB: writing_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U writing_ci -d writing_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://writing_ci:synthetic_ci_password@localhost:5432/writing_test?schema=public
+      WEB_ORIGIN: http://localhost:3000
+      JWT_SECRET: synthetic_ci_only_64_char_or_longer_secret_never_use_this_in_production_123456
+      PORT: '3001'
+      LOCAL_PROVISION_ACK: ONLY_SYNTHETIC_TEST_DATA
+      LOCAL_PROVISION_EMAIL: local-admin@example.test
+      LOCAL_PROVISION_PASSWORD: SYNTHETIC_CI_ONLY_PASSWORD_Keep_Private_In_Real_Deployments
+      LOCAL_PROVISION_ROLE: SUPER_ADMIN
+      STEP85_SYNTHETIC_ACK: ONLY_SYNTHETIC_TEST_DATA
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install reproducible dependencies when lockfile exists
+        shell: bash
+        run: |
+          if [[ -f package-lock.json ]]; then
+            npm ci --no-audit --no-fund
+          else
+            echo 'WARNING: Bootstrap only: no committed package-lock.json. This is NOT a reproducible release.'
+            npm install --no-audit --no-fund
+          fi
+      - name: TypeScript domain and pure-policy checks
+        run: |
+          npm test
+          npm run typecheck
+          npm --workspace apps/api run typecheck:policies
+      - name: Generate Prisma client and validate migration
+        run: |
+          npm --workspace apps/api run db:generate
+          npm --workspace apps/api run typecheck
+          npm --workspace apps/api run db:migrate
+      - name: Database-backed safety tests (never skipped)
+        run: RUN_POSTGRES_INTEGRATION=1 npm --workspace apps/api run test:db
+      - name: Provision synthetic local administrator only
+        run: npm --workspace apps/api run provision:local
+      - name: API HTTP smoke test against local ephemeral PostgreSQL
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm --workspace apps/api run start > /tmp/writing-api-step85.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for _ in $(seq 1 35); do
+            if curl -sf http://127.0.0.1:3001/api/v1/health > /dev/null; then ready=1;break; fi
+            if ! kill -0 "$api_pid" 2>/dev/null; then break; fi
+            sleep 1
+          done
+          if [[ "$ready" != '1' ]]; then
+            cat /tmp/writing-api-step85.log
+            echo 'API DID NOT START: live integration gate failed'
+            exit 1
+          fi
+          node scripts/smoke-http-step85.mjs
+      - name: Python AI boundary tests
+        run: |
+          python -m pip install -e 'apps/ai-service[test]'
+          (cd apps/ai-service && python -m pytest -q)
