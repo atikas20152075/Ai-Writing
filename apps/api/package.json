@@ -14,7 +14,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:dev": "prisma migrate dev",
-    "test:db": "tsx --test --test-concurrency=1 test/postgres.integration.test.ts test/step88.integration.test.ts"
+    "test:db": "tsx --test --test-concurrency=1 test/postgres.integration.test.ts test/step88.integration.test.ts test/step89.integration.test.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.15",
