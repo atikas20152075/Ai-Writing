@@ -36,7 +36,7 @@ BEGIN
    NEW.snapshot->>'rubricVersionId' IS DISTINCT FROM score."rubricVersionId"::text OR
    NEW.snapshot->>'revisionNo' IS DISTINCT FROM score."revisionNo"::text OR
    NEW.snapshot->>'source' IS DISTINCT FROM score.source OR
-   NEW.snapshot->>'topicTitle' IS DISTINCT FROM score."topicSnapshot"->>'title' OR
+   (NEW.snapshot->>'topicTitle') IS DISTINCT FROM (score."topicSnapshot"->>'title') OR
    (NEW.snapshot->>'totalScore')::numeric IS DISTINCT FROM score."totalScore" OR
    (NEW.snapshot->>'totalMarks')::numeric IS DISTINCT FROM score."totalMarks" OR
    jsonb_array_length(NEW.snapshot->'factorResults') IS DISTINCT FROM jsonb_array_length(score."factorResults") OR
