@@ -5,16 +5,18 @@ export type ProjectionAvailability='CURRENT'|'STALE'|'UNAVAILABLE';
 export type ProjectionJobStatus='PENDING'|'PROCESSING'|'REBUILT'|'FAILED'|'BLOCKED'|'SUPERSEDED';
 export interface ProjectionReceipt {target:string;scoreRevisionId:string;status:string}
 export interface ProjectionStatus {target:ProjectionTarget;availability:ProjectionAvailability;jobStatus:string|null}
-export type MaterializedVersions=Partial<Record<'FEEDBACK'|'PRACTICE'|'PROGRESS',string|null>>;
+export type MaterializedVersions=Partial<Record<'FEEDBACK'|'PRACTICE'|'PROGRESS'|'TEACHER'|'REPORT',string|null>>;
 export function decideProjectionWork(target:string,jobRevision:string,effectiveRevision:string|null,
   isFinalized:boolean):
-  'SUPERSEDED'|'PUBLISH_PARENT'|'PUBLISH_FEEDBACK'|'PUBLISH_PRACTICE'|'PUBLISH_PROGRESS'|'BLOCKED' {
+  'SUPERSEDED'|'PUBLISH_PARENT'|'PUBLISH_FEEDBACK'|'PUBLISH_PRACTICE'|'PUBLISH_PROGRESS'|'PUBLISH_TEACHER'|'PUBLISH_REPORT'|'BLOCKED' {
   if(!isFinalized || effectiveRevision!==jobRevision)return 'SUPERSEDED';
   switch(target){
     case 'PARENT':return 'PUBLISH_PARENT';
     case 'FEEDBACK':return 'PUBLISH_FEEDBACK';
     case 'PRACTICE':return 'PUBLISH_PRACTICE';
     case 'PROGRESS':return 'PUBLISH_PROGRESS';
+    case 'TEACHER':return 'PUBLISH_TEACHER';
+    case 'REPORT':return 'PUBLISH_REPORT';
     default:return 'BLOCKED';
   }
 }
