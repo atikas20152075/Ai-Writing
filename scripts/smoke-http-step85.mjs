@@ -105,4 +105,11 @@ assert.deepEqual(races.map(r=>r.status).sort(),[200,401],`Concurrent refresh out
 checked++;
 const raceWinner=races.find(r=>r.status===200);
 await expectStatus('/auth/me',{token:raceWinner.data.accessToken},401,'concurrent replay revokes newly rotated session too');
+// Step 86: unknown accounts and existing accounts must receive the same generic throttle response.
+// Fail after the shared identity budget even when the user does not exist.
+const bruteEmail=`synthetic-nonexistent-${unique}@example.test`;
+for(let i=0;i<12;i++) await expectStatus('/auth/login',post('/auth/login',{email:bruteEmail,password:studentPassword}),401,'invalid login denied');
+await expectStatus('/auth/login',post('/auth/login',{email:bruteEmail.toUpperCase(),password:studentPassword}),429,'identity budget resists case-changing attempts');
+// Other identities at this address may still attempt normal authentication.
+await expectStatus('/auth/login',post('/auth/login',{email:adminEmail,password:adminPassword}),200,'other account not globally locked');
 console.log(JSON.stringify({result:'HTTP_SMOKE_PASSED',checks:checked,scope:'synthetic loopback',assessmentStatus:'AWAITING_UNDERSTANDING',aiScoring:'NOT_CONFIGURED'},null,2));

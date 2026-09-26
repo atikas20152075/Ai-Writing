@@ -3,6 +3,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {PrismaClient} from '@prisma/client';
+import {AuthRateLimitService} from '../src/auth/auth-rate-limit.service.ts';
+import {buildAuthRateTargets} from '../src/auth/rate-limit-policy.ts';
 
 const run=process.env.RUN_POSTGRES_INTEGRATION==='1';
 const url=process.env.DATABASE_URL;
@@ -112,6 +114,48 @@ test('unique student request identity blocks duplicate submitted records',{skip:
     await tx.submission.create({data:payload});
     await tx.submission.create({data:payload});
   },/unique|constraint/i);
+});
+
+test('shared PostgreSQL auth budgets atomically reject excess attempts and store no raw email/IP',{skip:!run},async()=>{
+  const secret='SYNTHETIC_DB_TEST_SECRET_USE_ONLY_FOR_TEST_0123456789_ABCD';
+  const ip=`synthetic-${randomUUID()}`;
+  const email=`synthetic-rate-${randomUUID()}@example.test`;
+  const target=buildAuthRateTargets('login',ip,secret,email);
+  const limiter=new AuthRateLimitService(db! as any);
+  const previous=process.env.AUTH_ABUSE_KEY;
+  process.env.AUTH_ABUSE_KEY=secret;
+  try {
+    for(let i=0;i<12;i++) await limiter.enforce('login',ip,email);
+    await assert.rejects(limiter.enforce('login',ip,email.toUpperCase()),(error:any)=>error?.getStatus?.()===429);
+    const stored=await db!.authRateWindow.findMany({where:{bucketKey:{in:target.map(t=>t.bucketKey)}}});
+    assert.equal(stored.length,2);
+    assert.deepEqual(stored.map(x=>x.attempts).sort((a,b)=>a-b),[12,12]);
+    assert.ok(stored.every(x=>!x.bucketKey.includes('synthetic')));
+  } finally {
+    if(previous===undefined) delete process.env.AUTH_ABUSE_KEY; else process.env.AUTH_ABUSE_KEY=previous;
+    await db!.authRateWindow.deleteMany({where:{bucketKey:{in:target.map(t=>t.bucketKey)}}});
+  }
+});
+
+test('concurrent registration requests share one global identity budget',{skip:!run},async()=>{
+  const secret='SYNTHETIC_DB_CONCURRENT_SECRET_USE_ONLY_FOR_TEST_0123456789';
+  const ip=`synthetic-${randomUUID()}`;
+  const email=`synthetic-parallel-${randomUUID()}@example.test`;
+  const target=buildAuthRateTargets('register',ip,secret,email);
+  const limiter=new AuthRateLimitService(db! as any);
+  const previous=process.env.AUTH_ABUSE_KEY;
+  process.env.AUTH_ABUSE_KEY=secret;
+  try {
+    const results=await Promise.allSettled(Array.from({length:5},()=>limiter.enforce('register',ip,email)));
+    assert.equal(results.filter(x=>x.status==='fulfilled').length,3);
+    assert.equal(results.filter(x=>x.status==='rejected' && (x.reason as any)?.getStatus?.()===429).length,2);
+    const stored=await db!.authRateWindow.findMany({where:{bucketKey:{in:target.map(t=>t.bucketKey)}}});
+    assert.equal(stored.length,2);
+    assert.equal(stored.find(x=>x.bucketKey===target[1].bucketKey)?.attempts,3);
+  } finally {
+    if(previous===undefined) delete process.env.AUTH_ABUSE_KEY; else process.env.AUTH_ABUSE_KEY=previous;
+    await db!.authRateWindow.deleteMany({where:{bucketKey:{in:target.map(t=>t.bucketKey)}}});
+  }
 });
 
 test.after(async()=>{if(db) await db.$disconnect();});

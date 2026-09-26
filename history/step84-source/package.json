@@ -1,8 +1,8 @@
 {
-  "name": "ai-writing-platform-step85",
+  "name": "ai-writing-platform-step84",
   "private": true,
-  "version": "0.2.0",
-  "description": "Step85 backend integration expansion: staging CI, synthetic HTTP smoke and PostgreSQL contract tests",
+  "version": "0.1.0",
+  "description": "Step 84 backend source increment with tested framework-free authorization policies for the AI Writing Assessment Platform",
   "workspaces": [
     "packages/*",
     "apps/api",
@@ -15,13 +15,11 @@
   "scripts": {
     "test:domain": "node --experimental-strip-types --test packages/domain/test/*.test.ts",
     "demo": "node --experimental-strip-types scripts/typed-slice-demo.ts",
-    "test:policies": "node --experimental-strip-types --test apps/api/test/policies.test.ts apps/api/test/auth-rate-policy.test.ts",
-    "test": "npm run test:domain && npm run test:policies && npm run test:static",
+    "test:policies": "node --experimental-strip-types --test apps/api/test/policies.test.ts",
+    "test": "npm run test:domain && npm run test:policies",
     "test:python": "cd apps/ai-service && python -m pytest -q",
     "typecheck:api": "npm --workspace apps/api run typecheck",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test:static": "node --test scripts/static-invariants.test.mjs",
-    "smoke:http": "node scripts/smoke-http-step85.mjs"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "type": "module",
   "devDependencies": {

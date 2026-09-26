@@ -7,72 +7,17 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum UserRole {
-  STUDENT
-  PARENT
-  TEACHER
-  ACADEMIC_ADMIN
-  SUPER_ADMIN
-}
-enum UserStatus {
-  ACTIVE
-  DISABLED
-}
-enum ProgramStatus {
-  ACTIVE
-  ARCHIVED
-}
-enum EnrollmentStatus {
-  ACTIVE
-  ENDED
-}
-enum GuardianLinkStatus {
-  PENDING
-  VERIFICATION_REQUIRED
-  VERIFIED
-  ACTIVE
-  SUSPENDED
-  REVOKED
-}
-enum AuthorityStatus {
-  ACTIVE
-  WITHDRAWN
-  EXPIRED
-}
-enum PublicationStatus {
-  DRAFT
-  PUBLISHED
-}
-enum Language {
-  BANGLA
-  ENGLISH
-}
-enum SubmissionStatus {
-  ACCEPTED
-  CANCELLED
-}
-enum AssessmentStatus {
-  AWAITING_UNDERSTANDING
-  UNDERSTANDING_READY
-  EXAMINER_PENDING
-  VERIFIER_PENDING
-  HUMAN_REVIEW
-  FINALIZED
-  FAILED
-}
-enum OutboxStatus {
-  PENDING
-  DISPATCHING
-  DISPATCHED
-}
-// Pseudonymous, shared per-endpoint fixed-window budgets. Never persist raw IP/email.
-model AuthRateWindow {
-  bucketKey   String   @id @db.VarChar(64)
-  attempts    Int
-  windowStart DateTime
-  resetAt     DateTime
-  @@index([resetAt])
-}
+enum UserRole { STUDENT PARENT TEACHER ACADEMIC_ADMIN SUPER_ADMIN }
+enum UserStatus { ACTIVE DISABLED }
+enum ProgramStatus { ACTIVE ARCHIVED }
+enum EnrollmentStatus { ACTIVE ENDED }
+enum GuardianLinkStatus { PENDING VERIFICATION_REQUIRED VERIFIED ACTIVE SUSPENDED REVOKED }
+enum AuthorityStatus { ACTIVE WITHDRAWN EXPIRED }
+enum PublicationStatus { DRAFT PUBLISHED }
+enum Language { BANGLA ENGLISH }
+enum SubmissionStatus { ACCEPTED CANCELLED }
+enum AssessmentStatus { AWAITING_UNDERSTANDING UNDERSTANDING_READY EXAMINER_PENDING VERIFIER_PENDING HUMAN_REVIEW FINALIZED FAILED }
+enum OutboxStatus { PENDING DISPATCHING DISPATCHED }
 
 model User {
   id                 String             @id @default(uuid()) @db.Uuid

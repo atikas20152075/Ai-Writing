@@ -1,7 +1,6 @@
 import {Body, Controller, Get, Headers, HttpCode, Inject, Post, Req, Res, UseGuards, ForbiddenException} from '@nestjs/common';
 import type {Request,Response} from 'express';
 import {AuthService} from './auth.service.ts';
-import {AuthRateLimitService} from './auth-rate-limit.service.ts';
 import {CredentialsDto} from './auth.dto.ts';
 import {JwtGuard,type AuthenticatedRequest} from './jwt.guard.ts';
 
@@ -12,25 +11,21 @@ function requireOrigin(origin:string|undefined) {
 }
 @Controller('auth')
 export class AuthController {
-  constructor(@Inject(AuthService) private readonly auth:AuthService,
-              @Inject(AuthRateLimitService) private readonly limiter:AuthRateLimitService){}
-  @Post('register') async register(@Req() req:Request,@Body() dto:CredentialsDto,@Headers('origin') origin:string|undefined,@Res({passthrough:true}) res:Response){
+  constructor(@Inject(AuthService) private readonly auth:AuthService){}
+  @Post('register') async register(@Body() dto:CredentialsDto,@Headers('origin') origin:string|undefined,@Res({passthrough:true}) res:Response){
     requireOrigin(origin);
-    await this.limiter.enforce('register',req.ip??'',dto.email);
     const result=await this.auth.register(dto);
     res.cookie('writing_refresh',result.refreshToken,refreshCookieOptions());
     return {accessToken:result.accessToken,tokenType:'Bearer'};
   }
-  @Post('login') @HttpCode(200) async login(@Req() req:Request,@Body() dto:CredentialsDto,@Headers('origin') origin:string|undefined,@Res({passthrough:true}) res:Response){
+  @Post('login') @HttpCode(200) async login(@Body() dto:CredentialsDto,@Headers('origin') origin:string|undefined,@Res({passthrough:true}) res:Response){
     requireOrigin(origin);
-    await this.limiter.enforce('login',req.ip??'',dto.email);
     const result=await this.auth.login(dto);
     res.cookie('writing_refresh',result.refreshToken,refreshCookieOptions());
     return {accessToken:result.accessToken,tokenType:'Bearer'};
   }
   @Post('refresh') @HttpCode(200) async refresh(@Req() req:Request,@Headers('origin') origin:string|undefined,@Res({passthrough:true}) res:Response){
     requireOrigin(origin);
-    await this.limiter.enforce('refresh',req.ip??'');
     const result=await this.auth.refresh(req.cookies?.writing_refresh);
     res.cookie('writing_refresh',result.refreshToken,refreshCookieOptions());
     return {accessToken:result.accessToken,tokenType:'Bearer'};
