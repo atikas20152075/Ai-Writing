@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer"><title>Writing Studio | Development Preview</title>
+<link rel="stylesheet" href="./styles.css"></head>
+<body>
+<a class="skip" href="#main">Skip to main content</a>
+<header class="top"><a class="brand" href="./index.html" aria-label="Writing Studio home"><span class="mark">✦</span> WRITING <strong>STUDIO</strong></a><span class="tag">DEVELOPMENT PREVIEW</span></header>
+<main id="main" class="shell">
+<section class="intro"><span class="eyebrow">A considered way to improve writing</span><h1>Turn every attempt into <em>progress.</em></h1>
+<p>Your private assessment workspace. All grades and progress come from approved server records—never placeholder scores.</p></section>
+<div id="notice" role="status" aria-live="polite" class="notice" hidden></div>
+<section id="signin" class="panel auth" aria-labelledby="signin-title">
+<div><span class="eyebrow">SECURE ACCESS</span><h2 id="signin-title">Welcome back</h2><p>Sign in to view only the records your account is authorized to access.</p></div>
+<form id="loginForm" autocomplete="on">
+<label>Email address<input id="email" type="email" autocomplete="username" required maxlength="254"></label>
+<label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+<button type="submit" id="loginButton">Sign in securely <span aria-hidden="true">→</span></button>
+</form><small>Tokens are kept only in memory, not localStorage. Use a controlled local development environment.</small></section>
+<section id="workspace" hidden aria-labelledby="workspace-title">
+<div class="workspace-top"><div><span class="eyebrow" id="roleLabel"></span><h2 id="workspace-title">Your workspace</h2></div><button id="logout" class="ghost" type="button">Sign out</button></div>
+<section id="student" class="panel" hidden><div class="panel-head"><div><span class="eyebrow">STUDENT</span><h3>My writing submissions</h3></div><button type="button" id="refreshStudent" class="secondary">Refresh</button></div>
+<p>Pending submissions have no score until authorized finalization is complete.</p><div id="submissions" class="stack"></div>
+<div id="studentResult" class="detail" aria-live="polite"></div></section>
+<section id="teacher" class="panel" hidden><span class="eyebrow">ACADEMIC WORKSPACE</span><h3>Current cohort assessments</h3><p>Enter an assigned batch ID. The server checks current teaching or program scope for every request.</p>
+<form id="cohortForm" class="inline"><label>Assigned batch UUID<input id="batchId" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" pattern="[a-fA-F0-9-]{36}"></label><button type="submit">View cohort</button></form>
+<div id="cohort" class="stack"></div></section>
+<section id="parent" class="panel" hidden><span class="eyebrow">PARENT</span><h3>Protected family access</h3>
+<p>Only currently verified links permit access. The full family dashboard is not implemented in this preview; it will use the existing server-scoped guardian endpoints. No child information is cached here.</p></section>
+<section id="admin" class="panel" hidden><h3>Administrative access</h3><p>Platform administration does not automatically grant access to private child assessment records.</p></section>
+</section></main><footer>Writing Studio · Development preview · Server-authoritative assessment results only</footer>
+<script type="module" src="./app.js"></script></body></html>
