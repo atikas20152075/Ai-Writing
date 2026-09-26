@@ -8,6 +8,7 @@ import {canonicalJson} from '../src/policies/submission-policy.ts';
 import {AssessmentPersistenceService} from '../src/assessment/assessment-persistence.service.ts';
 import {HumanReviewService} from '../src/review/review.service.ts';
 import {ProjectionService} from '../src/projections/projection.service.ts';
+import {AcademicViewsService} from '../src/views/academic-views.service.ts';
 const enabled=process.env.RUN_POSTGRES_INTEGRATION==='1';
 if(enabled&&(!process.env.DATABASE_URL||!new URL(process.env.DATABASE_URL).pathname.endsWith('_test')))
   throw new Error('Step90 requires disposable _test PostgreSQL');
@@ -57,7 +58,7 @@ async function fixture(tx:any){
  const reviews=new HumanReviewService({$transaction:async(cb:any)=>cb(tx),
   humanReviewCase:tx.humanReviewCase,assessment:tx.assessment} as any);
  const projections=new ProjectionService({$transaction:async(cb:any)=>cb(tx)} as any);
- return {a,b,user,student,assessment,reviews,projections};
+ return {a,b,user,student,program,batch,assessment,reviews,projections};
 }
 async function finalized(tx:any){
  const f=await fixture(tx);
@@ -72,7 +73,7 @@ async function rollbackCase(fn:(tx:any)=>Promise<void>){
    {timeout:45000}),{message:rollback});
 }
 
-test('real parent summary rebuilt transactionally; absent five modules remain unavailable',{skip:!enabled},async()=>{
+test('all six real projections materialize transactionally with canonical revision',{skip:!enabled},async()=>{
  await rollbackCase(async tx=>{
   const f=await finalized(tx);
   const before=await f.projections.statusForAuthorizedStudent(f.user.id,f.assessment.id);
@@ -86,14 +87,19 @@ test('real parent summary rebuilt transactionally; absent five modules remain un
     assert.equal(rebuilt.status,'REBUILT');
     assert.equal(rebuilt.target,target);
   }
-  for(let i=0;i<2;i++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'BLOCKED');
+  for(const target of ['TEACHER','REPORT']){
+    const built=await f.projections.processOne(f.assessment.id);
+    assert.equal(built.status,'REBUILT');
+    assert.equal(built.target,target);
+  }
   assert.equal((await f.projections.processOne(f.assessment.id)).status,'EMPTY');
   const after=await f.projections.statusForAuthorizedStudent(f.user.id,f.assessment.id);
-  for(const target of ['PARENT','FEEDBACK','PRACTICE','PROGRESS'])
+  for(const target of ['PARENT','FEEDBACK','PRACTICE','PROGRESS','TEACHER','REPORT'])
     assert.equal(after.projections.find(x=>x.target===target)?.availability,'CURRENT');
-  assert.equal(after.projections.filter(x=>x.availability==='UNAVAILABLE').length,2);
-  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'REBUILT'}}),4);
-  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'BLOCKED'}}),2);
+  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'REBUILT'}}),6);
+  const saved=await tx.academicReportSnapshot.findUniqueOrThrow({where:{
+    assessmentId_scoreRevisionId:{assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision}}});
+  assert.equal((saved.snapshot as any).schemaVersion,'academic-report-v1');
   const learning=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
   assert.equal((learning as any).learning.feedback.schemaVersion,'rubric-feedback-v1');
   assert.equal((learning as any).learning.practice.targets[0].factorId,'content');
@@ -183,7 +189,7 @@ test('learning artifacts are immediately withheld when a score revision supersed
   assert.equal(current.projections.find(x=>x.target==='FEEDBACK')?.availability,'STALE');
   // Old invalidations that were already rebuilt remain immutable history.
   assert.equal(await tx.derivedProjectionInvalidation.count({where:{
-    assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,status:'REBUILT'}}),4);
+    assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,status:'REBUILT'}}),6);
  });
 });
 test('database refuses fabricated feedback completion without a real matching artifact',{skip:!enabled},async()=>{
@@ -236,9 +242,8 @@ test('a new comparable assessment invalidates and proactively refreshes an older
   const stale=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
   assert.equal(stale.projections.find(x=>x.target==='PROGRESS')?.availability,'STALE');
   assert.equal((stale as any).learning.progress,null);
-  // Existing unsupported TEACHER/REPORT receipts are resolved before the idle
-  // cohort-refresh fallback is reached; no unsupported module can fake success.
-  for(let n=0;n<2;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'BLOCKED');
+  // Pending TEACHER/REPORT receipts materialize before idle cohort refresh.
+  for(let n=0;n<2;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'REBUILT');
   const refreshed=await f.projections.processOne(f.assessment.id);
   assert.equal(refreshed.status,'REFRESHED');
   assert.equal(refreshed.target,'PROGRESS');
@@ -248,6 +253,75 @@ test('a new comparable assessment invalidates and proactively refreshes an older
   assert.equal((current as any).learning.progress.status,'DESCRIPTIVE_DELTA');
   assert.equal(await tx.derivedProjectionInvalidation.count({where:{
     assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,status:'REBUILT'}}),4);
+ });
+});
+
+
+test('Step92 teacher dashboard requires live batch grant; never reads unassigned cohort',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   const teacher=await tx.user.create({data:{email:`teacher-${randomUUID()}@example.test`,
+     role:'TEACHER',passwordHash:'SYNTHETIC'}});
+   const outsider=await tx.user.create({data:{email:`teacher-out-${randomUUID()}@example.test`,
+     role:'TEACHER',passwordHash:'SYNTHETIC'}});
+   const grant=await tx.teacherBatch.create({data:{teacherId:teacher.id,batchId:f.batch.id}});
+   const views=new AcademicViewsService({$transaction:async(cb:any)=>cb(tx)} as any);
+   const visible=await views.teacherBatch(teacher.id,f.batch.id);
+   assert.equal(visible.items.length,1);
+   assert.equal(visible.items[0].result.totalScore,'2');
+   assert.equal(visible.items[0].summaryStatus,'STALE');
+   await assert.rejects(views.teacherBatch(outsider.id,f.batch.id),/Not Found|NotFound/i);
+   await f.projections.processOne(f.assessment.id);
+   for(let n=0;n<4;n++)await f.projections.processOne(f.assessment.id);
+   assert.equal((await views.teacherBatch(teacher.id,f.batch.id)).items[0].summaryStatus,'CURRENT');
+   await tx.teacherBatch.update({where:{id:grant.id},data:{endedAt:new Date()}});
+   await assert.rejects(views.teacherBatch(teacher.id,f.batch.id),/Not Found|NotFound/i);
+ });
+});
+test('Step92 only publishes version-current student report; old immutable snapshot remains historical',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   const views=new AcademicViewsService({$transaction:async(cb:any)=>cb(tx)} as any);
+   assert.equal((await views.currentReport(f.user.id,f.assessment.id)).status,'PENDING');
+   for(let n=0;n<6;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'REBUILT');
+   const report=await views.currentReport(f.user.id,f.assessment.id);
+   assert.equal(report.status,'CURRENT');
+   assert.equal((report.report as any).revisionId,f.firstRevision);
+   assert.equal((report.report as any).totalScore,'2.0000');
+   const old=await tx.academicReportSnapshot.findUniqueOrThrow({where:{
+     assessmentId_scoreRevisionId:{assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision}}});
+   const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
+   await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
+   await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
+   assert.equal((await views.currentReport(f.user.id,f.assessment.id)).status,'PENDING');
+   for(let n=0;n<6;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'REBUILT');
+   const current=await views.currentReport(f.user.id,f.assessment.id);
+   assert.equal(current.status,'CURRENT');
+   assert.notEqual((current.report as any).revisionId,f.firstRevision);
+   assert.equal((current.report as any).totalScore,'4.0000');
+   assert.equal((await tx.academicReportSnapshot.findUniqueOrThrow({where:{id:old.id}})).id,old.id);
+ });
+});
+test('Step92 reports reject direct forged marks and cannot change immutable prior snapshots',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   const forged={schemaVersion:'academic-report-v1',assessmentId:f.assessment.id,
+      revisionId:f.firstRevision,revisionNo:'1',source:'HUMAN',
+      totalScore:'4.0000',totalMarks:'4.0000',
+      rubricVersionId:randomUUID(),topicVersionId:randomUUID(),writingLanguage:'ENGLISH',
+      factors:factors('c4','4')};
+   await assert.rejects(tx.academicReportSnapshot.create({data:{
+      assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,snapshot:forged
+   }}),/STEP92_REPORT_NOT_CANONICAL/);
+ });
+});
+test('Step92 report denies another student even if an academic snapshot exists',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+   const f=await finalized(tx);
+   const outsider=await tx.user.create({data:{email:`report-out-${randomUUID()}@example.test`,
+     role:'STUDENT',passwordHash:'SYNTHETIC'}});
+   const views=new AcademicViewsService({$transaction:async(cb:any)=>cb(tx)} as any);
+   await assert.rejects(views.currentReport(outsider.id,f.assessment.id),/Not Found|NotFound/i);
  });
 });
 
