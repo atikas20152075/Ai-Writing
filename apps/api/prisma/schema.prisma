@@ -98,6 +98,7 @@ model User {
   sessions           AuthSession[]
   guardianLinks      ParentStudentLink[] @relation("Guardian")
   teacherAssignments TeacherBatch[]     @relation("AssignedTeacher")
+  createdReports ReportSnapshot[]       @relation("ReportCreatedBy")
 }
 model AuthSession {
   id           String             @id @default(uuid()) @db.Uuid
@@ -584,6 +585,7 @@ model ReportSnapshot {
   snapshotHash String @db.VarChar(64)
   createdById String @db.Uuid
   createdAt DateTime @default(now())
+  createdBy User @relation("ReportCreatedBy",fields:[createdById],references:[id],onDelete:Restrict)
   assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
   scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
   @@unique([assessmentId,scoreRevisionId,formatVersion])
