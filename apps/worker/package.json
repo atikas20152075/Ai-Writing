@@ -6,7 +6,8 @@
   "scripts": {
     "outbox:dev": "tsx src/outbox-dispatcher.ts",
     "assessment:dev": "tsx src/assessment-job-consumer.ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "projections:dev": "tsx src/projection-rebuilder.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.3.0",

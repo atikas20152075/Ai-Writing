@@ -177,10 +177,11 @@ test('UPHOLD closes finalized appeal without changing the effective score',{skip
    const f=await fixture(tx);await finalizedAI(tx,f);
    const initial=(await tx.assessment.findUniqueOrThrow({where:{id:f.a.id}})).effectiveScoreRevisionId;
    const opened=await svc.open(actor(f.studentUser),f.a.id,reason);
+   const beforeCount=await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.a.id}});
    await svc.decide(actor(f.other),opened.caseId,'UPHOLD',reason);
    const unchanged=await tx.assessment.findUniqueOrThrow({where:{id:f.a.id}});
    assert.equal(unchanged.effectiveScoreRevisionId,initial);
-   assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.a.id}}),0);
+   assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.a.id}}),beforeCount);
  });
 });
 

@@ -50,3 +50,7 @@ Step88 adds reviewed Understanding snapshots, database-guarded immutable Examine
 ## Step 89 — Scope-bound human review and grade revisions
 
 Reviewed Understanding, two independently authorized academic reviewers, guarded append-only HUMAN score revisions, a single effective score pointer and PENDING invalidation records are implemented in the backend. Current, verified linked guardians can access the effective result using a single scoped SQL query; unrelated students cannot appeal another child's result. See [Step89 implementation and remaining release blockers](docs/step89-human-score-revisions.md). These synthetic integration tests do not qualify real AI scoring or constitute a deployed service.
+
+## Step 90 — Revision-aware freshness (development)
+
+Score revisions now generate six durable invalidations, including initial verified AI results. An opt-in PostgreSQL worker actually materializes a minimal current **PARENT** score summary and SQL verifies it against the canonical effective revision; other targets are explicitly BLOCKED until real rebuild engines exist. A student-scoped projection-status endpoint labels stale data correctly. See [Step90 scope and limitations](docs/step90-projection-freshness.md). No live notification delivery, feedback/PDF generation, production deployment or expert-approved AI grading is implied.
