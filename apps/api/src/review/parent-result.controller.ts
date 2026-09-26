@@ -18,7 +18,7 @@ export class ParentAssessmentResultController {
     const valid=await this.db.parentStudentLink.findFirst({where:{guardianId:req.actor.userId,studentId,
       programId:a.submission.programId,status:'ACTIVE',verifiedAt:{lte:now},activatedAt:{lte:now},revokedAt:null,
       student:{enrollments:{some:{programId:a.submission.programId,status:'ACTIVE',startedAt:{lte:now},endedAt:null}},
-        authorities:{some:{programId:a.submission.programId,purpose:'CORE_ASSESSMENT',status:'ACTIVE',endedAt:null}}}}}});
+        authorities:{some:{programId:a.submission.programId,purpose:'CORE_ASSESSMENT',status:'ACTIVE',endedAt:null}}}}});
     if(!valid)throw new NotFoundException();
     if(a.status!=='FINALIZED'||!a.effectiveScoreRevision)
       return {assessmentId:a.id,status:a.status,result:null};
