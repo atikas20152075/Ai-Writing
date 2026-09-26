@@ -2,12 +2,15 @@ import {Controller,Get,Inject,Param,ParseUUIDPipe,Req,Res,StreamableFile,UseGuar
 import type {Response} from 'express';
 import {JwtGuard,type AuthenticatedRequest} from '../auth/jwt.guard.ts';
 import {ReportService} from './report.service.ts';
+import {ReportRateService} from './report-rate.service.ts';
 /** Each request recomputes CURRENT academic object-level rights; no durable public download URL. */
 @Controller('reports/assessments') @UseGuards(JwtGuard)
 export class ReportController{
- constructor(@Inject(ReportService)private readonly reports:ReportService){}
+ constructor(@Inject(ReportService)private readonly reports:ReportService,
+  @Inject(ReportRateService)private readonly limiter:ReportRateService){}
  @Get(':id/pdf')async pdf(@Req()req:AuthenticatedRequest,
   @Param('id',new ParseUUIDPipe())id:string,@Res({passthrough:true})res:Response){
+  await this.limiter.charge(req.actor.userId);
   const out=await this.reports.englishPdf(req.actor,id);
   res.setHeader('Content-Type','application/pdf');
   res.setHeader('Cache-Control','private, no-store, max-age=0');
