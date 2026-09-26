@@ -73,7 +73,7 @@ async function downloadPdf(id){
   const blob=await api('/reports/assessments/'+encodeURIComponent(id)+'/pdf',{asBlob:true});
   const url=URL.createObjectURL(blob);const anchor=document.createElement('a');
   anchor.href=url;anchor.download='writing-report-'+id.slice(0,8)+'.pdf';anchor.click();
-  queueMicrotask(()=>URL.revokeObjectURL(url));notice('Current authorized report prepared. Historical PDFs cannot be revoked after download.');
+  setTimeout(()=>URL.revokeObjectURL(url),60000);notice('Current authorized report prepared. Historical PDFs cannot be revoked after download.');
  }catch(error){notice(error.message,true);}
 }
 el('loginForm').addEventListener('submit',async event=>{
