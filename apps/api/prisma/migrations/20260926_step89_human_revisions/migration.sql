@@ -99,12 +99,12 @@ LANGUAGE sql STABLE AS $$
         AND pa.status='ACTIVE' AND pa."endedAt" IS NULL) AND (
       (u.role='ACADEMIC_ADMIN' AND EXISTS (
         SELECT 1 FROM "AcademicAdminProgram" p WHERE p."userId"=actor AND p."programId"=s."programId"
-          AND p."assignedAt"<=now() AND p."endedAt" IS NULL)) OR
+          AND p."assignedAt"<=statement_timestamp() AND p."endedAt" IS NULL)) OR
       (u.role='TEACHER' AND EXISTS (
         SELECT 1 FROM "TeacherBatch" t JOIN "Enrollment" e ON e."batchId"=t."batchId"
-        WHERE t."teacherId"=actor AND t."batchId"=s."batchId" AND t."assignedAt"<=now()
+        WHERE t."teacherId"=actor AND t."batchId"=s."batchId" AND t."assignedAt"<=statement_timestamp()
           AND t."endedAt" IS NULL AND e."studentId"=s."studentId" AND e."programId"=s."programId"
-          AND e.status='ACTIVE' AND e."startedAt"<=now() AND e."endedAt" IS NULL))
+          AND e.status='ACTIVE' AND e."startedAt"<=statement_timestamp() AND e."endedAt" IS NULL))
     )
   )
 $$;
@@ -133,7 +133,7 @@ BEGIN
         AND l.status='ACTIVE' AND EXISTS (SELECT 1 FROM "ProcessingAuthority" pa WHERE pa."studentId"=student_id
           AND pa."programId"=program_id AND pa.purpose='CORE_ASSESSMENT' AND pa.status='ACTIVE' AND pa."endedAt" IS NULL)
         AND l."verifiedAt" IS NOT NULL AND l."activatedAt" IS NOT NULL AND l."revokedAt" IS NULL
-        AND e.status='ACTIVE' AND e."startedAt"<=now() AND e."endedAt" IS NULL)) OR
+        AND e.status='ACTIVE' AND e."startedAt"<=statement_timestamp() AND e."endedAt" IS NULL)) OR
     (role_ IN ('TEACHER','ACADEMIC_ADMIN') AND NEW.kind IN ('ACADEMIC_CORRECTION','AI_ESCALATION')
       AND step89_academic_reviewer_authorized(NEW."openedById",NEW."assessmentId"))
   ) THEN RAISE EXCEPTION 'STEP89_REVIEW_REQUESTER_SCOPE'; END IF;
@@ -214,7 +214,7 @@ BEGIN
       AND u."topicHash"=s."topicHash" AND u."rubricHash"=s."rubricHash"
       AND g.id=e."gateId" AND g."programId"=s."programId"
       AND g."rubricVersionId"=s."rubricVersionId" AND g.language=t.language
-      AND g."revokedAt" IS NULL AND g."expiresAt">now()
+      AND g."revokedAt" IS NULL AND g."expiresAt">statement_timestamp()
       AND a."effectiveScoreRevisionId" IS NULL AND NEW."revisionNo"=1
   ) THEN RAISE EXCEPTION 'STEP88_UNVERIFIED_SCORE_REVISION'; END IF;
  ELSIF NEW.source='HUMAN' THEN
@@ -282,7 +282,7 @@ BEGIN
         WHERE r.id=NEW."effectiveScoreRevisionId" AND r."assessmentId"=NEW.id AND r."revisionNo"=1
           AND e."assessmentId"=NEW.id AND v."examinerRunId"=e.id AND v.status='PASS'
           AND NOT v."scoreChangingCorrection" AND v."inputHash"=r."inputHash" AND e."inputHash"=r."inputHash"
-          AND g."revokedAt" IS NULL AND g."expiresAt">now()
+          AND g."revokedAt" IS NULL AND g."expiresAt">statement_timestamp()
       ) THEN RAISE EXCEPTION 'STEP88_INVALID_EFFECTIVE_SCORE'; END IF;
     ELSIF source_='HUMAN' THEN
       IF TG_OP<>'UPDATE' OR NOT EXISTS(
@@ -298,7 +298,7 @@ BEGIN
               SELECT prev."revisionNo"+1 FROM "AssessmentScoreRevision" prev WHERE prev.id=OLD."effectiveScoreRevisionId"))
           )
       ) THEN RAISE EXCEPTION 'STEP89_INVALID_HUMAN_FINALIZATION'; END IF;
-    ELSE RAISE EXCEPTION 'STEP89_INVALID_EFFECTIVE_SCORE_SOURCE'; END IF;
+    ELSE RAISE EXCEPTION 'STEP89_INVALID_FINALIZATION_SOURCE'; END IF;
   END IF;
   RETURN NEW;
 END $$;
