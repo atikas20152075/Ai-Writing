@@ -40,7 +40,7 @@ BEGIN
    (NEW.snapshot->>'totalScore')::numeric IS DISTINCT FROM score."totalScore" OR
    (NEW.snapshot->>'totalMarks')::numeric IS DISTINCT FROM score."totalMarks" OR
    jsonb_array_length(NEW.snapshot->'factorResults') IS DISTINCT FROM jsonb_array_length(score."factorResults") OR
-   NOT(score."factorResults" @> NEW.snapshot->'factorResults')
+   NOT(score."factorResults" @> (NEW.snapshot->'factorResults'))
  THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL'; END IF;
  RETURN NEW;
 END $$;
