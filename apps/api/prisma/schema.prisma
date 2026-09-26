@@ -65,6 +65,18 @@ enum OutboxStatus {
   DISPATCHING
   DISPATCHED
 }
+enum AIAttemptStatus {
+  CLAIMED
+  RETRYABLE
+  COMPLETED
+  HUMAN_REVIEW
+  FAILED
+}
+enum AIVerifierDecision {
+  PASS
+  MAJOR_REVIEW
+  FAILED
+}
 // Pseudonymous, shared per-endpoint fixed-window budgets. Never persist raw IP/email.
 model AuthRateWindow {
   bucketKey   String   @id @db.VarChar(64)
@@ -281,7 +293,13 @@ model Assessment {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Restrict)
-  // No scores or AI verification records in this milestone; never fabricate a result.
+  understanding          UnderstandingSnapshot?
+  processingAttempts     AIProcessingAttempt[]
+  examinerRuns           AIExaminerRun[]
+  scoreRevisions         AssessmentScoreRevision[] @relation("AssessmentRevisions")
+  effectiveScoreRevisionId String? @unique @db.Uuid
+  effectiveScoreRevision AssessmentScoreRevision? @relation("EffectiveScoreRevision", fields: [effectiveScoreRevisionId], references: [id], onDelete: Restrict)
+  // Published scores are possible only through the Step88 guarded transaction and DB trigger.
 }
 model OutboxEvent {
   id           String @id @default(uuid()) @db.Uuid
@@ -304,4 +322,125 @@ model AuditEvent {
   details      Json?
   createdAt    DateTime @default(now())
   @@index([resourceType, resourceId, createdAt])
+}
+
+// Human-reviewed Understanding is immutable. No placeholder hash can authorize inference.
+model UnderstandingSnapshot {
+  id                   String @id @default(uuid()) @db.Uuid
+  assessmentId         String @unique @db.Uuid
+  verifiedTextId       String @db.Uuid
+  verifiedTextHash     String @db.VarChar(64)
+  topicHash            String @db.VarChar(64)
+  rubricHash           String @db.VarChar(64)
+  schemaVersion        String
+  snapshot             Json
+  snapshotHash         String @db.VarChar(64)
+  reviewedById         String @db.Uuid
+  createdAt            DateTime @default(now())
+  assessment           Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+}
+
+// Operational state is mutable; academic evidence and score records are append-only.
+model AIProcessingAttempt {
+  id           String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  gateId       String @db.Uuid
+  runKey       String @unique @db.VarChar(64)
+  inputHash    String @db.VarChar(64)
+  leaseToken   String @db.Uuid
+  leaseUntil   DateTime
+  attemptCount Int @default(1)
+  status       AIAttemptStatus @default(CLAIMED)
+  errorCode    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  gate         AIReleaseGate @relation(fields: [gateId], references: [id], onDelete: Restrict)
+  examinerRun  AIExaminerRun?
+  @@index([assessmentId, status])
+  @@index([status, leaseUntil])
+}
+
+model AIReleaseGate {
+  id                  String @id @default(uuid()) @db.Uuid
+  programId           String @db.Uuid
+  rubricVersionId     String @db.Uuid
+  language            Language
+  examinerModel       String
+  verifierModel       String
+  academicBenchmarkRef String
+  privacyReviewRef    String
+  approvedById        String @db.Uuid
+  approvedAt          DateTime
+  expiresAt           DateTime
+  revokedAt           DateTime?
+  attempts            AIProcessingAttempt[]
+  examinerRuns        AIExaminerRun[]
+  @@index([programId, rubricVersionId, language, revokedAt])
+}
+
+// Internal trusted-worker results. Store only checked, normalized factor data + provider IDs.
+model AIExaminerRun {
+  id                  String @id @default(uuid()) @db.Uuid
+  assessmentId        String @db.Uuid
+  processingAttemptId String @unique @db.Uuid
+  gateId              String @db.Uuid
+  externalRunId       String
+  inputHash           String @db.VarChar(64)
+  proposal            Json
+  proposalHash        String @db.VarChar(64)
+  totalScore          Decimal @db.Decimal(12,4)
+  totalMarks          Decimal @db.Decimal(12,4)
+  model               String
+  promptVersion       String
+  providerRequestId   String
+  createdAt           DateTime @default(now())
+  assessment          Assessment @relation(fields: [assessmentId], references: [id], onDelete: Restrict)
+  processingAttempt   AIProcessingAttempt @relation(fields: [processingAttemptId], references: [id], onDelete: Restrict)
+  gate                AIReleaseGate @relation(fields: [gateId], references: [id], onDelete: Restrict)
+  verifications       AIVerificationAttempt[]
+  revisions           AssessmentScoreRevision[]
+  @@unique([assessmentId, externalRunId])
+  @@index([assessmentId, inputHash])
+}
+
+model AIVerificationAttempt {
+  id                          String @id @default(uuid()) @db.Uuid
+  examinerRunId               String @db.Uuid
+  externalAttemptId           String
+  inputHash                   String @db.VarChar(64)
+  status                      AIVerifierDecision
+  scoreChangingCorrection     Boolean
+  reviewedFactorIds           Json
+  independentFactorResults    Json
+  findings                    Json
+  model                       String
+  promptVersion               String
+  independentProviderRequestId String
+  challengeProviderRequestId String
+  createdAt                   DateTime @default(now())
+  examinerRun                 AIExaminerRun @relation(fields: [examinerRunId], references: [id], onDelete: Restrict)
+  revisions                   AssessmentScoreRevision[]
+  @@unique([examinerRunId, externalAttemptId])
+}
+
+// One initial automatic revision is allowed. Human re-evaluation is a separate audited milestone.
+model AssessmentScoreRevision {
+  id              String @id @default(uuid()) @db.Uuid
+  assessmentId    String @db.Uuid
+  revisionNo      Int
+  examinerRunId   String @db.Uuid
+  verificationId  String @unique @db.Uuid
+  inputHash       String @db.VarChar(64)
+  totalScore      Decimal @db.Decimal(12,4)
+  totalMarks      Decimal @db.Decimal(12,4)
+  factorResults   Json
+  source          String
+  createdAt       DateTime @default(now())
+  assessment      Assessment @relation("AssessmentRevisions", fields: [assessmentId], references: [id], onDelete: Restrict)
+  examinerRun     AIExaminerRun @relation(fields: [examinerRunId], references: [id], onDelete: Restrict)
+  verification    AIVerificationAttempt @relation(fields: [verificationId], references: [id], onDelete: Restrict)
+  effectiveFor    Assessment? @relation("EffectiveScoreRevision")
+  @@unique([assessmentId, revisionNo])
+  @@unique([examinerRunId])
 }

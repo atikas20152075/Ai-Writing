@@ -100,6 +100,16 @@ function ensure(ok: unknown, code: string, message: string): asserts ok {
 export const hash = (value: string): string =>
   createHash('sha256').update(value, 'utf8').digest('hex');
 
+/** Canonical, order-independent JSON: database JSONB may reorder object keys. */
+function canonicalAcademicJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonicalAcademicJson).join(',')}]`;
+  if (value && typeof value === 'object') {
+    const record=value as Record<string,unknown>;
+    return `{${Object.keys(record).sort().map(k=>`${JSON.stringify(k)}:${canonicalAcademicJson(record[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
+
 // Exact base-10 rational arithmetic; no JS floating-point mark summation.
 const DECIMAL_RE = /^(0|[1-9]\d*)(\.\d{1,4})?$/;
 const factor10 = (n: number): bigint => 10n ** BigInt(n);
@@ -184,7 +194,7 @@ export function lockAssessmentContext(
   ensure(/^[0-9a-f]{64}$/.test(topicSnapshotHash) && /^[0-9a-f]{64}$/.test(understandingSnapshotHash),
     'INVALID_CONTEXT_HASH', 'Context hashes must be SHA-256 hex');
   validatePublishedRubric(rubric);
-  const inputHash = hash(JSON.stringify({
+  const inputHash = hash(canonicalAcademicJson({
     assessmentId,
     verifiedTextId: verifiedText.id,
     contentHash: verifiedText.contentHash,

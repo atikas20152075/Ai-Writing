@@ -20,7 +20,7 @@ export interface AIResult {
   examinerMetadata:{runId:string;model:string;promptVersion:string;providerRequestId:string};
   verifierMetadata:{attemptId:string;model:string;promptVersion:string;independentProviderRequestId:string;challengeProviderRequestId:string};
   verification:{status:'PASS'|'MAJOR_REVIEW'|'FAILED';reviewedFactorIds:string[];
-    scoreChangingCorrection:boolean;findings:string[]};
+    scoreChangingCorrection:boolean;findings:string[];independentFactorResults:FactorProposal[]};
 }
 export type SafeFetch = typeof fetch;
 export interface GatewayOptions {origin:string; token:string;fetchFn?:SafeFetch;}
@@ -130,7 +130,7 @@ export class AIGatewayClient {
         independentProviderRequestId:requiredString(verifier.independent_provider_request_id),
         challengeProviderRequestId:requiredString(verifier.challenge_provider_request_id)},
       verification:{status:verifier.status,reviewedFactorIds:actual,scoreChangingCorrection:verifier.score_changing_correction,
-        findings:verifier.findings.map(requiredString)}
+        findings:verifier.findings.map(requiredString),independentFactorResults:indep}
     };
   }
 }

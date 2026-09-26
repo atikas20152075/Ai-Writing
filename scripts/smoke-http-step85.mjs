@@ -72,6 +72,10 @@ const submitted=await expectStatus('/submissions/typed',post('/submissions/typed
 assert.equal(submitted.data.status,'AWAITING_UNDERSTANDING','No simulated score or finalization may be returned');
 assert.equal(submitted.data.replayed,false);
 assert.ok(submitted.data.assessmentId);
+const initialScore=await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/result`,
+  {token:studentToken},200,'pending score never fabricated');
+assert.equal(initialScore.data.result,null);
+assert.equal(initialScore.data.status,'AWAITING_UNDERSTANDING');
 const replay=await expectStatus('/submissions/typed',post('/submissions/typed',submissionBody,studentToken),201,'idempotent retry');
 assert.equal(replay.data.submissionId,submitted.data.submissionId);
 assert.equal(replay.data.replayed,true);
@@ -83,6 +87,8 @@ await expectStatus(`/submissions/mine/${submitted.data.submissionId}`,{token:adm
 // A second self-registered student cannot see another student's submission.
 const other=await expectStatus('/auth/register',post('/auth/register',{email:`synthetic-other-${unique}@example.test`,password:studentPassword}),201,'second synthetic student registration');
 await expectStatus(`/submissions/mine/${submitted.data.submissionId}`,{token:other.data.accessToken},404,'cross-student access denied');
+await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/result`,
+  {token:other.data.accessToken},404,'cross-student result access denied');
 await expectStatus('/submissions/typed',post('/submissions/typed',{...submissionBody,clientRequestId:randomUUID()},other.data.accessToken),403,'unenrolled student is denied');
 
 // Rotation and reuse tests are intentionally sequential here; parallel test belongs in DB-backed auth suite.

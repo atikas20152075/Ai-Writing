@@ -15,7 +15,7 @@ All runtime E2E fixtures use synthetic `example.test` identities and a disposabl
 
 ## Pre-release blockers
 
-1. **Dependency lockfile committed and validated:** synthetic CI run [36236724557](https://github.com/atikas20152075/Ai-Writing/actions/runs/36236724557) passed using `npm ci`. The CI script now requires `npm ci` with an ephemeral test secret setup and passed [strict run 36236815628](https://github.com/atikas20152075/Ai-Writing/actions/runs/36236815628).
+1. **Dependency lockfile committed:** synthetic CI [36236724557](https://github.com/atikas20152075/Ai-Writing/actions/runs/36236724557) passed using `npm ci`. Latest strict `npm ci` CI plus ephemeral CI-only credentials must pass before this is considered a durable release gate.
 2. Real AI Examiner and **independent** Verifier integration plus strict rubric/evidence validation and trusted DB finalizer/human review.
 3. Expert adjudicated Bangla and English benchmarks by writing type and learner level; OCR separately gated on student verification.
 4. Verified guardian onboarding, authorized child-data processing, provider diligence and data-retention/deletion mechanisms.
@@ -30,6 +30,11 @@ All runtime E2E fixtures use synthetic `example.test` identities and a disposabl
 - `history/step83-source`, `history/step84-source`: source-only historical snapshots; any earlier tests are historical, not current release evidence.
 - Current runnable development code is the repo root and `apps/`, `packages/`, `scripts/`.
 
-## Step 87 — Tested gated external AI boundary
 
-Implemented a non-streaming fixed-endpoint OpenAI Responses adapter with strict JSON Schema structured outputs, published-rubric exact-point/Unicode-evidence validation, independent verifier-model judgment *before* revealing the Examiner output, subsequent skeptical challenge, and a private TypeScript bridge that independently revalidates both results. HTTP validation errors redact raw child writing. All model calls remain **disabled by default**, subject to real child processing/vendor approval and expert Bangla/English benchmark gates. These are synthetic mocked-provider tests, **not real inference or deployable AI scoring**. The NestJS assessment remains pending until future versioned Understanding, durable run storage, and an authorized transactional finalizer are implemented. See `docs/step87-real-ai-examiner-verifier.md`.
+### Step 87 — Real provider transport (gated)
+
+Implemented a fixed-endpoint Responses API adapter, strict Pydantic scoring/evidence checks (including Bangla grapheme boundaries), separate different-model independent verifier and challenged verifier call, private token authentication, redacted validation errors, and a TypeScript locked-context bridge. All external inference remains disabled until explicit academic benchmark and child-data/vendor approval. **The resulting AI proposal is not a finalized grade**: the database-backed Understanding Snapshot, immutable attempts, policy-gated finalizer and expert-validated scoring benchmarks are still required. Refer to `step87-real-ai-examiner-verifier.md` and the actual GitHub CI results.
+
+## Step 88 — Current in-repository implementation
+
+`docs/step88-persistent-assessment.md` is the authoritative scope/release-boundary documentation for Step88. This step adds additive Prisma migration for immutable, linked assessment evidence and initial effective score revisions; reviewed-Understanding publication and fenced worker persistence; no provisional score leakage to students; synthetic pure-policy, disposable PostgreSQL and HTTP regression tests. Verified synthetic PostgreSQL migration and service integration on [GitHub Actions 36239714330](https://github.com/atikas20152075/Ai-Writing/actions/runs/36239714330), including order-independent canonical hash regression, 19 DB-backed tests, 42 synthetic HTTP checks and 11 mocked-provider Python tests. This does NOT imply live AI scoring, expert benchmarks or production deployment. Real expert-approved AI grading, vendor/legal gates, worker deployment, parent/teacher delivery and human score-appeal revisions remain outstanding.
