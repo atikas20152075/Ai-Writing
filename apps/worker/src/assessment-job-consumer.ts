@@ -1,6 +1,6 @@
 /** Opt-in Step88 internal consumer. Do not run for real children before academic/privacy approvals. */
 import {Worker} from 'bullmq';
-import IORedis from 'ioredis';
+import {Redis} from 'ioredis';
 import {PrismaService} from '../../api/src/prisma/prisma.service.ts';
 import {AssessmentPersistenceService} from '../../api/src/assessment/assessment-persistence.service.ts';
 import {AIGatewayClient} from '../../api/src/ai/ai-gateway-client.ts';
@@ -13,7 +13,7 @@ if(!(url.hostname==='localhost'||url.hostname==='127.0.0.1'||url.hostname==='ai-
     (url.protocol==='https:'&&url.hostname.endsWith('.internal'))))
   throw Error('AI service must be an explicitly approved internal network endpoint');
 const db=new PrismaService();
-const redis=new IORedis(process.env.REDIS_URL,{maxRetriesPerRequest:null});
+const redis=new Redis(process.env.REDIS_URL,{maxRetriesPerRequest:null});
 const gateway=new AIGatewayClient({origin:url.origin,token:process.env.AI_SERVICE_SHARED_TOKEN});
 const processor=new AssessmentPersistenceService(db);
 await db.$connect();
