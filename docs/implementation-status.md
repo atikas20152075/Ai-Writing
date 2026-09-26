@@ -29,3 +29,7 @@ All runtime E2E fixtures use synthetic `example.test` identities and a disposabl
 - `docs/architecture-steps-73-82.md`: subsequent consolidated architecture.
 - `history/step83-source`, `history/step84-source`: source-only historical snapshots; any earlier tests are historical, not current release evidence.
 - Current runnable development code is the repo root and `apps/`, `packages/`, `scripts/`.
+
+## Step 87 — Tested gated external AI boundary
+
+Implemented a non-streaming fixed-endpoint OpenAI Responses adapter with strict JSON Schema structured outputs, published-rubric exact-point/Unicode-evidence validation, independent verifier-model judgment *before* revealing the Examiner output, subsequent skeptical challenge, and a private TypeScript bridge that independently revalidates both results. HTTP validation errors redact raw child writing. All model calls remain **disabled by default**, subject to real child processing/vendor approval and expert Bangla/English benchmark gates. These are synthetic mocked-provider tests, **not real inference or deployable AI scoring**. The NestJS assessment remains pending until future versioned Understanding, durable run storage, and an authorized transactional finalizer are implemented. See `docs/step87-real-ai-examiner-verifier.md`.
