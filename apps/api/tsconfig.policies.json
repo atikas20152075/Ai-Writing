@@ -14,6 +14,8 @@
     "test/assessment-policy.test.ts",
     "test/review-policy.test.ts",
     "src/projections/projection-policy.ts",
-    "test/projection-policy.test.ts"
+    "test/projection-policy.test.ts",
+    "src/projections/learning-builders.ts",
+    "test/learning-builders.test.ts"
   ]
 }

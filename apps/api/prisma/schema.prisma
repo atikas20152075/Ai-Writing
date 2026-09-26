@@ -300,6 +300,9 @@ model Assessment {
   effectiveScoreRevisionId String? @unique @db.Uuid
   effectiveScoreRevision AssessmentScoreRevision? @relation("EffectiveScoreRevision", fields: [effectiveScoreRevisionId], references: [id], onDelete: Restrict)
   parentScoreProjection ParentScoreProjection?
+  feedbackProjection FeedbackProjection?
+  practiceProjection PracticeProjection?
+  progressProjection ProgressProjection?
   // Published scores are possible only through the Step88 guarded transaction and DB trigger.
 }
 model OutboxEvent {
@@ -445,6 +448,9 @@ model AssessmentScoreRevision {
   effectiveFor    Assessment? @relation("EffectiveScoreRevision")
   @@unique([assessmentId, revisionNo])
   parentUses ParentScoreProjection[]
+  feedbackUses FeedbackProjection[]
+  practiceUses PracticeProjection[]
+  progressUses ProgressProjection[]
   @@unique([examinerRunId])
 }
 
@@ -531,6 +537,35 @@ model ParentScoreProjection {
   source String
   totalScore Decimal @db.Decimal(12,4)
   totalMarks Decimal @db.Decimal(12,4)
+  updatedAt DateTime @default(now())
+  assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
+  scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@index([scoreRevisionId])
+}
+
+model FeedbackProjection {
+  assessmentId String @id @db.Uuid
+  scoreRevisionId String @db.Uuid
+  snapshot Json
+  updatedAt DateTime @default(now())
+  assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
+  scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@index([scoreRevisionId])
+}
+model PracticeProjection {
+  assessmentId String @id @db.Uuid
+  scoreRevisionId String @db.Uuid
+  snapshot Json
+  updatedAt DateTime @default(now())
+  assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
+  scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@index([scoreRevisionId])
+}
+model ProgressProjection {
+  assessmentId String @id @db.Uuid
+  scoreRevisionId String @db.Uuid
+  cohortSignature String @db.VarChar(64)
+  snapshot Json
   updatedAt DateTime @default(now())
   assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
   scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)

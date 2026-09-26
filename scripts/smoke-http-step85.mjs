@@ -80,6 +80,11 @@ const pendingProjections=await expectStatus(`/assessments/mine/${submitted.data.
   {token:studentToken},200,'pending student projections cannot fake rebuilt analytics');
 assert.equal(pendingProjections.data.projections.length,6);
 assert.ok(pendingProjections.data.projections.every(x=>x.availability==='UNAVAILABLE'));
+const pendingLearning=await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/learning`,
+  {token:studentToken},200,'unfinalized learning cannot fabricate rubric feedback or progress');
+assert.equal(pendingLearning.data.learning.feedback,null);
+assert.equal(pendingLearning.data.learning.practice,null);
+assert.equal(pendingLearning.data.learning.progress,null);
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections`,
   {token:adminToken},403,'admin cannot use student-only projection status');
 const replay=await expectStatus('/submissions/typed',post('/submissions/typed',submissionBody,studentToken),201,'idempotent retry');
@@ -97,6 +102,8 @@ await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/result`,
   {token:other.data.accessToken},404,'cross-student result access denied');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections`,
   {token:other.data.accessToken},404,'cross-student projection status access denied');
+await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/learning`,
+  {token:other.data.accessToken},404,'cross-student learning material access denied');
 await expectStatus('/submissions/typed',post('/submissions/typed',{...submissionBody,clientRequestId:randomUUID()},other.data.accessToken),403,'unenrolled student is denied');
 
 // Rotation and reuse tests are intentionally sequential here; parallel test belongs in DB-backed auth suite.

@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 89 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 91 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
@@ -54,3 +54,7 @@ Reviewed Understanding, two independently authorized academic reviewers, guarded
 ## Step 90 — Revision-aware freshness (development)
 
 Score revisions now generate six durable invalidations, including initial verified AI results. An opt-in PostgreSQL worker actually materializes a minimal current **PARENT** score summary and SQL verifies it against the canonical effective revision; other targets are explicitly BLOCKED until real rebuild engines exist. A student-scoped projection-status endpoint labels stale data correctly. See [Step90 scope and limitations](docs/step90-projection-freshness.md). No live notification delivery, feedback/PDF generation, production deployment or expert-approved AI grading is implied.
+
+## Step 91 — Revision-pinned learning read models
+
+Actual deterministic **rubric feedback**, **practice rewrite targets** and **same-rubric descriptive progress** are now versioned against the canonical effective score. Older materializations and changed comparable cohorts are withheld. Unsupported teacher/dashboard and PDF/report generation remain explicitly unavailable. See [Step91 engineering scope](docs/step91-revision-pinned-learning.md). No live AI, real student data or production deployment is configured.
