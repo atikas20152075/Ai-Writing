@@ -15,7 +15,7 @@ All runtime E2E fixtures use synthetic `example.test` identities and a disposabl
 
 ## Pre-release blockers
 
-1. Pin and commit `package-lock.json`; replace conditional `npm install` with mandatory `npm ci` in CI.
+1. **Dependency lockfile committed and validated:** synthetic CI run [36236724557](https://github.com/atikas20152075/Ai-Writing/actions/runs/36236724557) passed using `npm ci`. Remove the obsolete bootstrap fallback from the historical CI script before treating that conditional script as a release gate.
 2. Real AI Examiner and **independent** Verifier integration plus strict rubric/evidence validation and trusted DB finalizer/human review.
 3. Expert adjudicated Bangla and English benchmarks by writing type and learner level; OCR separately gated on student verification.
 4. Verified guardian onboarding, authorized child-data processing, provider diligence and data-retention/deletion mechanisms.
