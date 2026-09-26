@@ -123,7 +123,7 @@ BEGIN
     (a_status='HUMAN_REVIEW' AND (prior IS NOT NULL OR NEW."priorRevisionId" IS NOT NULL OR NEW.kind<>'AI_ESCALATION')) OR
     a_status NOT IN ('FINALIZED','HUMAN_REVIEW')
   THEN RAISE EXCEPTION 'STEP89_REVIEW_SOURCE_MISMATCH'; END IF;
-  IF NOT (
+  IF role_ IS NULL OR NOT (
     (role_='STUDENT' AND NEW.kind='STUDENT_APPEAL' AND EXISTS (SELECT 1 FROM "Student" st JOIN "ProcessingAuthority" pa ON pa."studentId"=st.id
       WHERE st.id=student_id AND st."userId"=NEW."openedById" AND pa."programId"=program_id AND pa.purpose='CORE_ASSESSMENT'
         AND pa.status='ACTIVE' AND pa."endedAt" IS NULL)) OR
