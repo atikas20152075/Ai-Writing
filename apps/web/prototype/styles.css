@@ -9,3 +9,6 @@
 .prompt ul{padding-left:20px}
 .composer small{display:block;margin-top:15px}
 .meta{font-size:.86rem;color:#b4c5df}
+
+/* Author display rules must never override the native hidden state. */
+[hidden]{display:none!important}

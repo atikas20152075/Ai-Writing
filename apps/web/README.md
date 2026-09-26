@@ -1,3 +1,7 @@
-# Next.js application — planned D6 implementation
+# Web application — Step93 development preview
 
-Not implemented. The first UX will provide an accessible typed-writing editor, clear real processing statuses, score and feedback views, then expand to parent/teacher and handwritten OCR. No synthetic score or simulated approval may be shown as an authentic assessment.
+The isolated `prototype/` implements student original typed submission and results, scoped teacher cohort pages, verified-family assessment pages, and current English PDF requests. See [preview setup](prototype/README.md).
+
+This is a static local development preview, **not the planned production Next.js application**. No live model inference, public hosting, complete PFCR learning UI, human-review UI, handwriting/OCR flow, or real-child onboarding is implied.
+
+Next: migrate these scoped workflows to the Next.js workspace with a reviewed same-origin authentication boundary, then verify browser E2E and accessibility. Preserve the request fences, current server-side authorization and explicit pending/unavailable states.

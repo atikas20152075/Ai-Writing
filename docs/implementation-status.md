@@ -54,3 +54,7 @@ Revision-pinned FEEDBACK/PRACTICE/PROGRESS materialization is now implemented in
 ## Step 92 — Scoped teacher dashboard and on-demand English report (development)
 
 Implements authenticated teacher/batch and program-admin read access without a global super-admin bypass; revision-aware current score and review-state metadata. Provides real minimal multipage English printable PDF bytes under current object-level access, an immutable database report snapshot and audit, and a version-scoped REPORT rebuild receipt. **The PDF is generated in-memory, not stored in private S3**; Bengali Unicode PDF and richer teacher UI remain release blockers. Verified [Step92 CI 36254187747](https://github.com/atikas20152075/Ai-Writing/actions/runs/36254187747) PASSED: 135 Node tests including 43 PostgreSQL tests, 52 synthetic HTTP checks and 11 mocked-provider Python tests; real child processing and production deploy remain blocked. See [Step92](step92-teacher-reports.md).
+
+## Step93 continuation — current portal scope
+
+PRs #11–12 added a local static student/teacher preview and scoped topic catalog/typed editor. The follow-up [family portal and session-safety increment](step93-family-portal.md) adds verified-family discovery/detail, parent/teacher pagination, and late-response fencing. The web workspace is still **not Next.js**. Step92 production closeout, browser E2E, bilingual reports and real-model/child-data approvals remain open. See the linked evidence for exact checks; historical sections above remain historical snapshots.
