@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 91 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 92 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
