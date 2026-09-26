@@ -1,5 +1,5 @@
 # Synthetic-only Step88 API/DB/AI contract validation. NEVER deploy or invoke a real provider.
-name: Backend integrity: Step 88
+name: "Backend integrity: Step 88"
 on:
   push:
     branches: [main]
