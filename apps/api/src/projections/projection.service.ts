@@ -37,11 +37,11 @@ export class ProjectionService {
         ?await tx.$queryRaw<Candidate[]>`SELECT id,"assessmentId","scoreRevisionId",target
           FROM "DerivedProjectionInvalidation" WHERE status='PENDING' AND "assessmentId"=${assessmentId}::uuid
           ORDER BY CASE target WHEN 'PARENT' THEN 0 WHEN 'FEEDBACK' THEN 1
-            WHEN 'PRACTICE' THEN 2 WHEN 'PROGRESS' THEN 3 ELSE 4 END,"createdAt",target LIMIT 20`
+            WHEN 'PRACTICE' THEN 2 WHEN 'PROGRESS' THEN 3 WHEN 'TEACHER' THEN 4 WHEN 'REPORT' THEN 5 ELSE 6 END,"createdAt",target LIMIT 20`
         :await tx.$queryRaw<Candidate[]>`SELECT id,"assessmentId","scoreRevisionId",target
           FROM "DerivedProjectionInvalidation" WHERE status='PENDING'
           ORDER BY CASE target WHEN 'PARENT' THEN 0 WHEN 'FEEDBACK' THEN 1
-            WHEN 'PRACTICE' THEN 2 WHEN 'PROGRESS' THEN 3 ELSE 4 END,"createdAt",target LIMIT 20`;
+            WHEN 'PRACTICE' THEN 2 WHEN 'PROGRESS' THEN 3 WHEN 'TEACHER' THEN 4 WHEN 'REPORT' THEN 5 ELSE 6 END,"createdAt",target LIMIT 20`;
       for(const item of candidates){
         // Assessment-first locking matches the human correction transaction.
         const assessment=(await tx.$queryRaw<LockedAssessment[]>`
@@ -67,7 +67,13 @@ export class ProjectionService {
         }
         const revision=await tx.assessmentScoreRevision.findUnique({where:{id:job.scoreRevisionId}});
         if(!revision||revision.assessmentId!==assessment.id)throw new Error('STEP91_CURRENT_REVISION_MISSING');
-        if(next==='PUBLISH_PARENT'){
+        if(next==='PUBLISH_TEACHER'){
+          await tx.teacherScoreProjection.upsert({where:{assessmentId:assessment.id},
+            create:{assessmentId:assessment.id,scoreRevisionId:revision.id,revisionNo:revision.revisionNo,
+              source:revision.source,totalScore:revision.totalScore,totalMarks:revision.totalMarks},
+            update:{scoreRevisionId:revision.id,revisionNo:revision.revisionNo,source:revision.source,
+              totalScore:revision.totalScore,totalMarks:revision.totalMarks,updatedAt:new Date()}});
+        }else if(next==='PUBLISH_PARENT'){
           await tx.parentScoreProjection.upsert({where:{assessmentId:assessment.id},
             create:{assessmentId:assessment.id,scoreRevisionId:revision.id,revisionNo:revision.revisionNo,
               source:revision.source,totalScore:revision.totalScore,totalMarks:revision.totalMarks},
@@ -94,7 +100,24 @@ export class ProjectionService {
             if(!new Prisma.Decimal(validated.totalScore).equals(revision.totalScore)||
               !new Prisma.Decimal(validated.totalMarks).equals(revision.totalMarks))
               throw new Error('STEP91_SCORE_MISMATCH');
-            if(next==='PUBLISH_FEEDBACK'){
+            if(next==='PUBLISH_REPORT'){
+              // An immutable report is a version-pinned approved-data snapshot, NOT a PDF.
+              // Fixed-scale decimals match the DB's independent canonical provenance guard.
+              const snapshot={schemaVersion:'academic-report-v1',assessmentId:a.id,
+                revisionId:revision.id,revisionNo:String(revision.revisionNo),
+                source:revision.source,
+                totalScore:revision.totalScore.toFixed(4),totalMarks:revision.totalMarks.toFixed(4),
+                rubricVersionId:sub.rubricVersionId,writingLanguage:v.language,
+                topicVersionId:sub.topicVersionId,
+                factors};
+              await tx.academicReportSnapshot.createMany({data:[{
+                assessmentId:a.id,scoreRevisionId:revision.id,
+                snapshot:snapshot as unknown as Prisma.InputJsonValue}],skipDuplicates:true});
+              const persisted=await tx.academicReportSnapshot.findUnique({where:{
+                assessmentId_scoreRevisionId:{assessmentId:a.id,scoreRevisionId:revision.id}}});
+              if(!persisted||hash(canonicalJson(persisted.snapshot))!==hash(canonicalJson(snapshot)))
+                throw new Error('STEP92_REPORT_SNAPSHOT_COLLISION');
+            }else if(next==='PUBLISH_FEEDBACK'){
               const snapshot=buildRubricFeedback(revision.id,rubric,factors);
               await tx.feedbackProjection.upsert({where:{assessmentId:a.id},
                 create:{assessmentId:a.id,scoreRevisionId:revision.id,
@@ -181,11 +204,15 @@ export class ProjectionService {
     const receipts=a.effectiveScoreRevisionId
       ?await tx.derivedProjectionInvalidation.findMany({where:{assessmentId:a.id,
         scoreRevisionId:a.effectiveScoreRevisionId},select:{target:true,status:true,scoreRevisionId:true}}):[];
-    const [parent,feedback,practice,progress]=await Promise.all([
+    const [parent,feedback,practice,progress,teacher,report]=await Promise.all([
       tx.parentScoreProjection.findUnique({where:{assessmentId:a.id},select:{scoreRevisionId:true}}),
       tx.feedbackProjection.findUnique({where:{assessmentId:a.id}}),
       tx.practiceProjection.findUnique({where:{assessmentId:a.id}}),
-      tx.progressProjection.findUnique({where:{assessmentId:a.id}})
+      tx.progressProjection.findUnique({where:{assessmentId:a.id}}),
+      tx.teacherScoreProjection.findUnique({where:{assessmentId:a.id},select:{scoreRevisionId:true}}),
+      a.effectiveScoreRevisionId?tx.academicReportSnapshot.findUnique({where:{
+        assessmentId_scoreRevisionId:{assessmentId:a.id,scoreRevisionId:a.effectiveScoreRevisionId}
+      },select:{scoreRevisionId:true}}):Promise.resolve(null)
     ]);
     let progressRev:string|null=null;
     if(a.effectiveScoreRevisionId&&progress?.scoreRevisionId===a.effectiveScoreRevisionId){
@@ -193,7 +220,8 @@ export class ProjectionService {
       if(progress.cohortSignature===hash(comparableSignature(points)))progressRev=progress.scoreRevisionId;
     }
     const versions:MaterializedVersions={FEEDBACK:feedback?.scoreRevisionId??null,
-      PRACTICE:practice?.scoreRevisionId??null,PROGRESS:progressRev};
+      PRACTICE:practice?.scoreRevisionId??null,PROGRESS:progressRev,
+      TEACHER:teacher?.scoreRevisionId??null,REPORT:report?.scoreRevisionId??null};
     const availability=projectionAvailability(a.effectiveScoreRevisionId,receipts,
       parent?.scoreRevisionId??null,versions);
     const base={assessmentId:a.id,assessmentStatus:a.status,
