@@ -5,6 +5,11 @@ import {ProjectionService} from './projection.service.ts';
 @Controller('assessments') @UseGuards(JwtGuard)
 export class ProjectionStatusController {
   constructor(@Inject(ProjectionService)private readonly service:ProjectionService){}
+  @Get('mine/:id/learning') learning(@Req()req:AuthenticatedRequest,
+    @Param('id',new ParseUUIDPipe())id:string){
+    if(req.actor.role!=='STUDENT')throw new ForbiddenException();
+    return this.service.learningForAuthorizedStudent(req.actor.userId,id);
+  }
   @Get('mine/:id/projections') status(@Req()req:AuthenticatedRequest,
     @Param('id',new ParseUUIDPipe())id:string){
     if(req.actor.role!=='STUDENT')throw new ForbiddenException();
