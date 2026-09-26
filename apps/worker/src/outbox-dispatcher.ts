@@ -1,14 +1,14 @@
 /** Optional at-least-once PostgreSQL outbox dispatcher. No AI job consumer exists yet. */
 import {PrismaClient} from '@prisma/client';
 import {Queue} from 'bullmq';
-import IORedis from 'ioredis';
+import {Redis} from 'ioredis';
 
 // Fail closed: never silently remove a submission event without its D2 consumer.
 if(process.env.ENABLE_OUTBOX_DISPATCHER!=='1' || process.env.AI_JOB_CONSUMER_READY!=='1')
   throw new Error('Dispatcher disabled until the real, tested AI job consumer is ready');
 if(!process.env.DATABASE_URL || !process.env.REDIS_URL) throw new Error('Database and Redis required');
 const db=new PrismaClient();
-const redis=new IORedis(process.env.REDIS_URL,{maxRetriesPerRequest:null});
+const redis=new Redis(process.env.REDIS_URL,{maxRetriesPerRequest:null});
 const queue=new Queue('assessment-jobs',{connection:redis});
 let shuttingDown=false;
 process.on('SIGINT',()=>{shuttingDown=true;});
