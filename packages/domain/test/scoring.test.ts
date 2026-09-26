@@ -121,3 +121,19 @@ test('a failed status cannot ride on an already finalized approval',()=>{
   rejectsCode(()=>finalizeApprovedAssessment(v,{...simulatedApproval,status:'FAILED'},result),
     'VERIFICATION_NOT_APPROVED');
 });
+
+
+test('locked context fingerprint is stable across PostgreSQL JSONB object-key ordering',()=>{
+  function reverseKeys(value:unknown):unknown {
+    if(Array.isArray(value)) return value.map(reverseKeys);
+    if(value && typeof value==='object')
+      return Object.fromEntries(Object.entries(value).reverse().map(([k,v])=>[k,reverseKeys(v)]));
+    return value;
+  }
+  const reordered=reverseKeys(rubric) as PublishedRubric;
+  const original=lockAssessmentContext(context.assessmentId,verifiedText,context.topicSnapshotHash,
+    context.understandingSnapshotHash,rubric);
+  const restored=lockAssessmentContext(context.assessmentId,verifiedText,context.topicSnapshotHash,
+    context.understandingSnapshotHash,reordered);
+  assert.equal(original.inputHash,restored.inputHash);
+});
