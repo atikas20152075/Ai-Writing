@@ -6,6 +6,7 @@
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
+- [Step 72 Error Intelligence design](docs/step72-error-intelligence.md)
 - [Detailed later-stage decisions, Steps 73–82](docs/architecture-steps-73-82.md)
 - [Current actual test evidence and remaining release blockers](docs/implementation-status.md)
 - [Step 86 authentication hardening and current plan](docs/step86-auth-integration.md)
