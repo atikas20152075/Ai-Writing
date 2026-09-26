@@ -58,3 +58,7 @@ Score revisions now generate six durable invalidations, including initial verifi
 ## Step 91 — Revision-pinned learning read models
 
 Actual deterministic **rubric feedback**, **practice rewrite targets** and **same-rubric descriptive progress** are now versioned against the canonical effective score. Older materializations and changed comparable cohorts are withheld. Unsupported teacher/dashboard and PDF/report generation remain explicitly unavailable. See [Step91 engineering scope](docs/step91-revision-pinned-learning.md). No live AI, real student data or production deployment is configured.
+
+## Step 92 — Scoped cohort dashboard and English-only printable score report
+
+A backend-only authenticated teacher/cohort read endpoint uses current assignment, enrollment and educational processing scope; it does not provide global SUPER_ADMIN access or return raw child essays. Approved ENGLISH scores can be exported on demand as actual minimal PDF bytes only after current student/guardian/teacher/program scope rechecks in one transaction. Immutable as-of report snapshots and audit entries pin the canonical revision. Unsupported Bengali/mixed-script PDF remains explicitly unavailable pending approved Unicode typography and visual validation. See [Step92 engineering limits](docs/step92-teacher-reports.md). No UI deployment or private S3 archival is claimed.
