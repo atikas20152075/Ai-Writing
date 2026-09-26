@@ -81,13 +81,23 @@ test('real parent summary rebuilt transactionally; absent five modules remain un
   const current=await tx.parentScoreProjection.findUniqueOrThrow({where:{assessmentId:f.assessment.id}});
   assert.equal(current.scoreRevisionId,f.firstRevision);
   assert.equal(current.totalScore.toString(),'2');
-  for(let i=0;i<5;i++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'BLOCKED');
+  for(const target of ['FEEDBACK','PRACTICE','PROGRESS']){
+    const rebuilt=await f.projections.processOne(f.assessment.id);
+    assert.equal(rebuilt.status,'REBUILT');
+    assert.equal(rebuilt.target,target);
+  }
+  for(let i=0;i<2;i++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'BLOCKED');
   assert.equal((await f.projections.processOne(f.assessment.id)).status,'EMPTY');
   const after=await f.projections.statusForAuthorizedStudent(f.user.id,f.assessment.id);
-  assert.equal(after.projections.find(x=>x.target==='PARENT')?.availability,'CURRENT');
-  assert.equal(after.projections.filter(x=>x.availability==='UNAVAILABLE').length,5);
-  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'REBUILT'}}),1);
-  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'BLOCKED'}}),5);
+  for(const target of ['PARENT','FEEDBACK','PRACTICE','PROGRESS'])
+    assert.equal(after.projections.find(x=>x.target===target)?.availability,'CURRENT');
+  assert.equal(after.projections.filter(x=>x.availability==='UNAVAILABLE').length,2);
+  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'REBUILT'}}),4);
+  assert.equal(await tx.derivedProjectionInvalidation.count({where:{assessmentId:f.assessment.id,status:'BLOCKED'}}),2);
+  const learning=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal((learning as any).learning.feedback.schemaVersion,'rubric-feedback-v1');
+  assert.equal((learning as any).learning.practice.targets[0].factorId,'content');
+  assert.equal((learning as any).learning.progress.status,'INSUFFICIENT_DATA');
  });
 });
 
@@ -157,4 +167,41 @@ test('student-only projection status cannot reveal another students assessment',
  });
 });
 
+
+test('learning artifacts are immediately withheld when a score revision supersedes them',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
+  for(let n=0;n<4;n++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'REBUILT');
+  const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
+  await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
+  await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
+  const stale=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal((stale as any).learning.feedback,null);
+  assert.equal((stale as any).learning.practice,null);
+  assert.equal((stale as any).learning.progress,null);
+  const current=await f.projections.statusForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal(current.projections.find(x=>x.target==='FEEDBACK')?.availability,'STALE');
+  // Old invalidations that were already rebuilt remain immutable history.
+  assert.equal(await tx.derivedProjectionInvalidation.count({where:{
+    assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,status:'REBUILT'}}),4);
+ });
+});
+test('database refuses fabricated feedback completion without a real matching artifact',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
+  const row=await tx.derivedProjectionInvalidation.findFirstOrThrow({where:{
+    assessmentId:f.assessment.id,target:'FEEDBACK'}});
+  await assert.rejects(tx.derivedProjectionInvalidation.update({where:{id:row.id},
+    data:{status:'REBUILT',processedAt:new Date()}}),/STEP90_REBUILD_UNSUPPORTED_OR_STALE/);
+ });
+});
+test('learning endpoint cannot disclose another student academic material',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
+  const other=await tx.user.create({data:{email:`learning-outsider-${randomUUID()}@example.test`,
+    role:'STUDENT',passwordHash:'SYNTHETIC'}});
+  await assert.rejects(f.projections.learningForAuthorizedStudent(other.id,f.assessment.id),
+    /Not Found|NotFound/i);
+ });
+});
 test.after(async()=>{if(db)await db.$disconnect();});
