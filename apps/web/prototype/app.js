@@ -1,6 +1,6 @@
 /* Dependency-free Step93 preview. Never store bearer credentials in browser storage. */
 const API='http://localhost:3001/api/v1'; // Development only. Production requires same-origin reverse proxy.
-let token=null, currentRole=null;
+let token=null, currentRole=null, writingOptions=[], pendingRequestId=null;
 const el=id=>document.getElementById(id);
 function notice(message,error=false){const n=el('notice');n.hidden=!message;n.classList.toggle('error',error);n.textContent=message||'';}
 function clear(node){node.replaceChildren();}
@@ -21,6 +21,7 @@ function lock(){
  token=null;currentRole=null;el('workspace').hidden=true;el('signin').hidden=false;
  for(const id of ['student','teacher','parent','admin'])el(id).hidden=true;
  clear(el('submissions'));clear(el('studentResult'));clear(el('cohort'));
+ writingOptions=[];pendingRequestId=null;clear(el('writingOption'));el('writingText').value='';el('writingPrompt').textContent='Select a topic to view the instructions.';
 }
 async function openPortal(accessToken){
  token=accessToken;const me=await api('/auth/me');currentRole=me.role;
@@ -28,8 +29,62 @@ async function openPortal(accessToken){
  const area=currentRole==='STUDENT'?'student':currentRole==='TEACHER'||currentRole==='ACADEMIC_ADMIN'?'teacher':
   currentRole==='PARENT'?'parent':'admin';
  for(const id of ['student','teacher','parent','admin'])el(id).hidden=id!==area;
- if(area==='student')await studentSubmissions();
+ if(area==='student'){await Promise.all([studentSubmissions(),loadWritingOptions()]);}
 }
+async function loadWritingOptions(){
+ const select=el('writingOption');clear(select);writingOptions=[];
+ const placeholder=document.createElement('option');placeholder.value='';placeholder.textContent='Choose a published topic';select.append(placeholder);
+ try{
+  const response=await api('/submissions/mine/writing-options');
+  writingOptions=Array.isArray(response.options)?response.options:[];
+  for(const option of writingOptions){
+   if(!checkUuid(option.programId)||!checkUuid(option.batchId)||!checkUuid(option.topicVersionId))continue;
+   const element=document.createElement('option');
+   element.value=option.topicVersionId+'|'+option.batchId+'|'+option.programId;
+   element.textContent=option.programName+' / '+option.batchName+' — '+option.title+' ('+option.language+')';
+   select.append(element);
+  }
+  if(select.options.length===1)placeholder.textContent='No currently authorized published topics';
+  if(response.truncated)notice('Only the first 100 authorized options are shown.');
+ }catch(error){placeholder.textContent='Topics unavailable';notice(error.message,true);}
+}
+el('writingOption').addEventListener('change',()=>{
+ pendingRequestId=null;
+ const raw=el('writingOption').value;
+ const option=writingOptions.find(o=>[o.topicVersionId,o.batchId,o.programId].join('|')===raw);
+ const prompt=el('writingPrompt');clear(prompt);
+ if(!option){prompt.textContent='Select a topic to view the instructions.';return;}
+ item(prompt,'strong',option.title+' · '+option.language);
+ item(prompt,'p',option.instructions);
+ if(Array.isArray(option.clues)&&option.clues.length){
+  const list=document.createElement('ul');
+  for(const clue of option.clues.slice(0,30))item(list,'li',typeof clue==='string'?clue:'See your teacher for the detailed clue.');
+  prompt.append(list);
+ }
+});
+el('writingText').addEventListener('input',()=>{
+ pendingRequestId=null;
+ const text=el('writingText').value;
+ el('writingCount').textContent=text.length+' characters · '+(text.trim()?text.trim().split(/\s+/u).length:0)+' whitespace-separated words';
+});
+el('writingForm').addEventListener('submit',async event=>{
+ event.preventDefault();notice('');
+ const option=writingOptions.find(o=>[o.topicVersionId,o.batchId,o.programId].join('|')===el('writingOption').value);
+ const text=el('writingText').value;
+ if(!option){notice('Select a currently available topic.',true);return;}
+ if(text.trim().length<10||text.length>24000){notice('Writing must contain 10–24,000 characters.',true);return;}
+ const button=el('submitWriting');button.disabled=true;
+ try{
+  const submitted=await api('/submissions/typed',{method:'POST',data:{
+   programId:option.programId,batchId:option.batchId,topicVersionId:option.topicVersionId,
+   clientRequestId:(pendingRequestId??=crypto.randomUUID()),text}});
+  el('writingText').value='';pendingRequestId=null;el('writingCount').textContent='0 characters';
+  await studentSubmissions();
+  notice('Submission '+submitted.submissionId.slice(0,8)+' accepted. Assessment status: '+submitted.status+'. No score is assumed.');
+ }catch(error){notice(error.message,true);}
+ finally{button.disabled=false;}
+});
+
 async function studentSubmissions(){
  notice('');const target=el('submissions');clear(target);clear(el('studentResult'));
  try{const rows=await api('/submissions/mine');

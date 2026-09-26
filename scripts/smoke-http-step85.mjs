@@ -66,6 +66,13 @@ const rubric=await expectStatus('/admin/rubric-versions/publish',post('/admin/ru
 },adminToken),201,'publish synthetic rubric');
 await expectStatus('/admin/rubric-bindings',post('/admin/rubric-bindings',{rubricVersionId:rubric.data.id},adminToken),201,'bind synthetic rubric');
 
+const available=await expectStatus('/submissions/mine/writing-options',
+ {token:studentToken},200,'student sees only currently eligible published topics');
+assert.equal(available.data.options.length,1);
+assert.equal(available.data.options[0].topicVersionId,topic.data.id);
+assert.equal(available.data.options[0].batchId,batchId);
+await expectStatus('/submissions/mine/writing-options',
+ {token:adminToken},403,'admin cannot enumerate private student writing options');
 const clientRequestId=randomUUID();
 const submissionBody={programId,batchId,topicVersionId:topic.data.id,clientRequestId,text:'I visited a beautiful hill with my friends. We saw green trees and a clear river.'};
 const submitted=await expectStatus('/submissions/typed',post('/submissions/typed',submissionBody,studentToken),201,'durable typed submission');
@@ -111,6 +118,8 @@ await expectStatus(`/submissions/mine/${submitted.data.submissionId}`,{token:adm
 
 // A second self-registered student cannot see another student's submission.
 const other=await expectStatus('/auth/register',post('/auth/register',{email:`synthetic-other-${unique}@example.test`,password:studentPassword}),201,'second synthetic student registration');
+const none=await expectStatus('/submissions/mine/writing-options',{token:other.data.accessToken},200,'unenrolled student sees no private topics');
+assert.equal(none.data.options.length,0);
 await expectStatus(`/submissions/mine/${submitted.data.submissionId}`,{token:other.data.accessToken},404,'cross-student access denied');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/result`,
   {token:other.data.accessToken},404,'cross-student result access denied');

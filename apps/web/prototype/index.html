@@ -19,7 +19,19 @@
 <section id="workspace" hidden aria-labelledby="workspace-title">
 <div class="workspace-top"><div><span class="eyebrow" id="roleLabel"></span><h2 id="workspace-title">Your workspace</h2></div><button id="logout" class="ghost" type="button">Sign out</button></div>
 <section id="student" class="panel" hidden><div class="panel-head"><div><span class="eyebrow">STUDENT</span><h3>My writing submissions</h3></div><button type="button" id="refreshStudent" class="secondary">Refresh</button></div>
-<p>Pending submissions have no score until authorized finalization is complete.</p><div id="submissions" class="stack"></div>
+<p>Pending submissions have no score until authorized finalization is complete.</p>
+<div class="composer">
+ <span class="eyebrow">PRACTICE · SUBMIT ORIGINAL WRITING</span>
+ <h4>Write from your own ideas</h4>
+ <p>Only published topics in your active program are available. Topic access is checked again on submission.</p>
+ <form id="writingForm">
+  <label>Choose an authorized topic<select id="writingOption" required><option value="">Loading authorized topics…</option></select></label>
+  <div id="writingPrompt" class="prompt" aria-live="polite">Select a topic to view the instructions.</div>
+  <label>Your writing<textarea id="writingText" minlength="10" maxlength="24000" required rows="10" placeholder="Write your own response here…"></textarea></label>
+  <p id="writingCount" class="meta" aria-live="polite">0 characters</p>
+  <button id="submitWriting" type="submit">Submit for assessment</button>
+ </form><small>Submitting does not create an instant grade. The approved assessment workflow determines the result.</small>
+</div><div id="submissions" class="stack"></div>
 <div id="studentResult" class="detail" aria-live="polite"></div></section>
 <section id="teacher" class="panel" hidden><span class="eyebrow">ACADEMIC WORKSPACE</span><h3>Current cohort assessments</h3><p>Enter an assigned batch ID. The server checks current teaching or program scope for every request.</p>
 <form id="cohortForm" class="inline"><label>Assigned batch UUID<input id="batchId" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" pattern="[a-fA-F0-9-]{36}"></label><button type="submit">View cohort</button></form>
