@@ -338,6 +338,9 @@ test('Step92 DB rejects forged report points or REPORT REBUILT without a real sn
     assessmentId:f.assessment.id,target:'REPORT'}});
   await assert.rejects(tx.derivedProjectionInvalidation.update({where:{id:receipt.id},
     data:{status:'REBUILT',processedAt:new Date()}}),/STEP90_REBUILD_UNSUPPORTED_OR_STALE/);
+ });
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
   const sub=await tx.submission.findUniqueOrThrow({where:{id:(
     await tx.assessment.findUniqueOrThrow({where:{id:f.assessment.id}})).submissionId}});
   await assert.rejects(tx.reportSnapshot.create({data:{assessmentId:f.assessment.id,
