@@ -395,8 +395,8 @@ test('Step93 guardian revocation, future verification and processing/enrollment 
    await assert.rejects(f.controller.result(f.req,f.student.id,f.assessment.id),/Not Found/i);
   };
   await tx.parentStudentLink.update({where:{id:f.link.id},data:{verifiedAt:new Date(Date.now()+86400000)}});await absent();
-  await tx.parentStudentLink.update({where:{id:f.link.id},data:{verifiedAt:new Date(),revokedAt:new Date()}});await absent();
-  await tx.parentStudentLink.update({where:{id:f.link.id},data:{revokedAt:null}});
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{status:'REVOKED',verifiedAt:new Date(),revokedAt:new Date()}});await absent();
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{status:'ACTIVE',revokedAt:null}});
   await tx.processingAuthority.updateMany({where:{studentId:f.student.id},data:{endedAt:new Date()}});await absent();
   await tx.processingAuthority.updateMany({where:{studentId:f.student.id},data:{endedAt:null}});
   await tx.enrollment.updateMany({where:{studentId:f.student.id},data:{endedAt:new Date()}});await absent();
@@ -404,12 +404,13 @@ test('Step93 guardian revocation, future verification and processing/enrollment 
   await tx.user.update({where:{id:f.guardian.id},data:{status:'DISABLED'}});await absent();
  });
 });
-test('Step93 keyset pages neither duplicate authority matches nor leak unlinked program or pending scores',{skip:!enabled},async()=>{
+test('Step93 keyset pages exclude historical authority duplicates, unlinked programs and pending scores',{skip:!enabled},async()=>{
  await rollbackCase(async tx=>{
   const f=await familyFixture(tx);
-  // A second qualifying authority must not duplicate a row in a page.
+  // Historical authority records must not duplicate a row in a page.
+  // The database intentionally forbids two simultaneous ACTIVE authorities.
   await tx.processingAuthority.create({data:{studentId:f.student.id,programId:f.sub.programId,
-   purpose:'CORE_ASSESSMENT',legalBasis:'SYNTHETIC_ONLY',policyVersion:'step93',approvedById:f.a.id}});
+   purpose:'CORE_ASSESSMENT',status:'WITHDRAWN',endedAt:new Date(),legalBasis:'SYNTHETIC_ONLY',policyVersion:'step93',approvedById:f.a.id}});
   for(let i=0;i<21;i++){
    const {id,createdAt,...copy}=f.sub;
    const sub=await tx.submission.create({data:{...copy,clientRequestId:randomUUID()}});

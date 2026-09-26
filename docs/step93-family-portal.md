@@ -20,7 +20,7 @@ The retained master blueprints and Steps73–82 describe product/architecture ta
 
 Local: generated Prisma client and full API typecheck passed; existing pure domain/policy/static tests passed. Seven executable tests run the real preview JavaScript with a minimal DOM/fetch harness: late response after logout, out-of-order refresh, stale 401 and delayed body parsing (including parse failures), cursor/pending state, auth serialization, and submission retry identity.
 
-Three additional disposable PostgreSQL tests cover family/program isolation and revised scores; link/processing/enrollment/account revocation; keyset pagination with duplicate authorities and null pending marks. Three additional loopback HTTP checks reject anonymous/student/super-admin discovery. These are required CI checks; their remote outcome must be recorded only after completion.
+Three additional disposable PostgreSQL tests cover family/program isolation and revised scores; link/processing/enrollment/account revocation; keyset pagination with historical authority rows and null pending marks. Three additional loopback HTTP checks reject anonymous/student/super-admin discovery. These are required CI checks; their remote outcome must be recorded only after completion.
 
 Browser binaries could not be installed locally (download returned an invalid archive). The DOM harness is **not** a real browser, visual audit, accessibility audit, or end-to-end authentication proof. No screenshots or browser acceptance are claimed.
 
