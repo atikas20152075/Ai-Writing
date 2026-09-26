@@ -1,9 +1,10 @@
-import {Body,Controller,Get,Inject,Param,ParseUUIDPipe,Post,Req,UseGuards} from '@nestjs/common';
+import {Body,Controller,Get,Inject,Param,ParseUUIDPipe,Post,Req,UseGuards,UseFilters} from '@nestjs/common';
 import {JwtGuard,type AuthenticatedRequest} from '../auth/jwt.guard.ts';
 import {HumanReviewService} from './review.service.ts';
+import {ReviewErrorFilter} from './review-error.filter.ts';
 import {DecideReviewDto,OpenReviewDto,ProposeCorrectionDto} from './review.dto.ts';
 
-@Controller('assessments') @UseGuards(JwtGuard)
+@Controller('assessments') @UseGuards(JwtGuard) @UseFilters(ReviewErrorFilter)
 export class OpenAssessmentReviewController {
   constructor(@Inject(HumanReviewService)private readonly review:HumanReviewService){}
   @Post(':assessmentId/review-cases') open(@Req() req:AuthenticatedRequest,
@@ -11,7 +12,7 @@ export class OpenAssessmentReviewController {
     return this.review.open(req.actor,assessmentId,body.reason);
   }
 }
-@Controller('review-cases') @UseGuards(JwtGuard)
+@Controller('review-cases') @UseGuards(JwtGuard) @UseFilters(ReviewErrorFilter)
 export class ReviewCasesController {
   constructor(@Inject(HumanReviewService)private readonly review:HumanReviewService){}
   @Get(':id') read(@Req() req:AuthenticatedRequest,@Param('id',new ParseUUIDPipe()) id:string){
