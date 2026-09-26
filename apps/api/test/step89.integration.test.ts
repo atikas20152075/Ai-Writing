@@ -147,12 +147,17 @@ test('revoked guardian cannot appeal or retrieve even a previously finalized res
     f.student.id,f.a.id),/Not Found|NotFound/i);
  });
 });
-test('PostgreSQL denies direct forged HUMAN revisions and premature status transitions',{skip:!enabled},async()=>{
+test('PostgreSQL rejects a forged human score without a second reviewer',{skip:!enabled},async()=>{
  await rollbackCase(async(tx)=>{
   const f=await fixture(tx);await flagged(tx,f);
   await assert.rejects(tx.assessmentScoreRevision.create({data:{assessmentId:f.a.id,
     revisionNo:1,source:'HUMAN',inputHash:'a'.repeat(64),totalScore:4,totalMarks:4,factorResults:[],reviewDecisionId:null}}),
-    /constraint|source|violates/i);
+    /unapproved|constraint|source|violates/i);
+ });
+});
+test('PostgreSQL rejects a premature FINALIZED transition without any score',{skip:!enabled},async()=>{
+ await rollbackCase(async(tx)=>{
+  const f=await fixture(tx);await flagged(tx,f);
   await assert.rejects(tx.assessment.update({where:{id:f.a.id},data:{status:'FINALIZED'}}),/constraint|finalization/i);
  });
 });
