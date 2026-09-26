@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current stage:** Step 86 (secure backend integration). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 89 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
@@ -46,3 +46,7 @@ Implemented a real OpenAI Responses HTTP adapter with strict JSON outputs; an in
 ## Step 88 — Durable vetted scoring pipeline (development-only)
 
 Step88 adds reviewed Understanding snapshots, database-guarded immutable Examiner/Verifier results, lease-fenced internal processing, a canonical effective score revision and a student-only finalized-result endpoint. See [Step88 implementation and release blockers](docs/step88-persistent-assessment.md). All local/CI model-output fixtures are synthetic; real external model processing and production score release remain disabled pending expert benchmarks and privacy/vendor authorization.
+
+## Step 89 — Scope-bound human review and grade revisions
+
+Reviewed Understanding, two independently authorized academic reviewers, guarded append-only HUMAN score revisions, a single effective score pointer and PENDING invalidation records are implemented in the backend. Current, verified linked guardians can access the effective result using a single scoped SQL query; unrelated students cannot appeal another child's result. See [Step89 implementation and remaining release blockers](docs/step89-human-score-revisions.md). These synthetic integration tests do not qualify real AI scoring or constitute a deployed service.

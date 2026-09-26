@@ -12,14 +12,14 @@ export class AssessmentReadController {
     if(!student)throw new NotFoundException();
     const assessment=await this.db.assessment.findFirst({where:{id,submission:{studentId:student.id}},
       select:{id:true,status:true,submission:{select:{rubricVersionId:true,programId:true}},
-        effectiveScoreRevision:{select:{id:true,totalScore:true,totalMarks:true,factorResults:true,createdAt:true,inputHash:true}}}});
+        effectiveScoreRevision:{select:{id:true,source:true,revisionNo:true,totalScore:true,totalMarks:true,factorResults:true,createdAt:true,inputHash:true}}}});
     if(!assessment)throw new NotFoundException();
     if(assessment.status!=='FINALIZED'||!assessment.effectiveScoreRevision){
       return {assessmentId:assessment.id,status:assessment.status,result:null};
     }
     const r=assessment.effectiveScoreRevision;
     return {assessmentId:assessment.id,status:'FINALIZED',rubricVersionId:assessment.submission.rubricVersionId,
-      result:{revisionId:r.id,totalScore:r.totalScore.toString(),totalMarks:r.totalMarks.toString(),
+      result:{revisionId:r.id,revisionNo:r.revisionNo,source:r.source,totalScore:r.totalScore.toString(),totalMarks:r.totalMarks.toString(),
         factorResults:r.factorResults,finalizedAt:r.createdAt}};
   }
 }

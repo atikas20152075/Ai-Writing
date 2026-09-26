@@ -424,13 +424,14 @@ model AIVerificationAttempt {
   @@unique([examinerRunId, externalAttemptId])
 }
 
-// One initial automatic revision is allowed. Human re-evaluation is a separate audited milestone.
+// Step89 retains immutable AI revision and accepts independently approved append-only human revisions.
 model AssessmentScoreRevision {
   id              String @id @default(uuid()) @db.Uuid
   assessmentId    String @db.Uuid
   revisionNo      Int
-  examinerRunId   String @db.Uuid
-  verificationId  String @unique @db.Uuid
+  examinerRunId   String? @db.Uuid
+  verificationId  String? @unique @db.Uuid
+  reviewDecisionId String? @unique @db.Uuid
   inputHash       String @db.VarChar(64)
   totalScore      Decimal @db.Decimal(12,4)
   totalMarks      Decimal @db.Decimal(12,4)
@@ -438,9 +439,83 @@ model AssessmentScoreRevision {
   source          String
   createdAt       DateTime @default(now())
   assessment      Assessment @relation("AssessmentRevisions", fields: [assessmentId], references: [id], onDelete: Restrict)
-  examinerRun     AIExaminerRun @relation(fields: [examinerRunId], references: [id], onDelete: Restrict)
-  verification    AIVerificationAttempt @relation(fields: [verificationId], references: [id], onDelete: Restrict)
+  examinerRun     AIExaminerRun? @relation(fields: [examinerRunId], references: [id], onDelete: Restrict)
+  verification    AIVerificationAttempt? @relation(fields: [verificationId], references: [id], onDelete: Restrict)
   effectiveFor    Assessment? @relation("EffectiveScoreRevision")
   @@unique([assessmentId, revisionNo])
   @@unique([examinerRunId])
+}
+
+
+enum ReviewCaseKind {
+  STUDENT_APPEAL
+  GUARDIAN_APPEAL
+  ACADEMIC_CORRECTION
+  AI_ESCALATION
+}
+enum ReviewCaseStatus {
+  OPEN
+  PROPOSED
+  RESOLVED_CORRECTED
+  RESOLVED_UPHELD
+  RESOLVED_REJECTED
+}
+enum ReviewDecisionKind {
+  APPROVE
+  REJECT
+  UPHOLD
+}
+// Explicit assignment is required; platform-level superuser does not inherit child-review rights.
+model AcademicAdminProgram {
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  programId String @db.Uuid
+  assignedAt DateTime @default(now())
+  endedAt DateTime?
+  @@index([userId,programId,endedAt])
+}
+model HumanReviewCase {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  openedById String @db.Uuid
+  kind ReviewCaseKind
+  status ReviewCaseStatus @default(OPEN)
+  priorRevisionId String? @db.Uuid
+  understandingHash String @db.VarChar(64)
+  reason String @db.Text
+  createdAt DateTime @default(now())
+  resolvedAt DateTime?
+  @@index([assessmentId,status,createdAt])
+}
+model HumanReviewProposal {
+  id String @id @default(uuid()) @db.Uuid
+  reviewCaseId String @unique @db.Uuid
+  proposedById String @db.Uuid
+  inputHash String @db.VarChar(64)
+  rubricHash String @db.VarChar(64)
+  factorResults Json
+  totalScore Decimal @db.Decimal(12,4)
+  totalMarks Decimal @db.Decimal(12,4)
+  reason String @db.Text
+  createdAt DateTime @default(now())
+}
+model HumanReviewDecision {
+  id String @id @default(uuid()) @db.Uuid
+  reviewCaseId String @unique @db.Uuid
+  proposalId String? @unique @db.Uuid
+  decidedById String @db.Uuid
+  decision ReviewDecisionKind
+  reason String @db.Text
+  createdAt DateTime @default(now())
+}
+model DerivedProjectionInvalidation {
+  id String @id @default(uuid()) @db.Uuid
+  assessmentId String @db.Uuid
+  scoreRevisionId String @db.Uuid
+  target String
+  status String @default("PENDING")
+  createdAt DateTime @default(now())
+  processedAt DateTime?
+  @@unique([assessmentId,scoreRevisionId,target])
+  @@index([status,createdAt])
 }
