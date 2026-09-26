@@ -1,6 +1,6 @@
 /* Dependency-free Step93 preview. Never store bearer credentials in browser storage. */
 const API='http://localhost:3001/api/v1'; // Development only. Production requires same-origin reverse proxy.
-let token=null, currentRole=null, writingOptions=[];
+let token=null, currentRole=null, writingOptions=[], pendingRequestId=null;
 const el=id=>document.getElementById(id);
 function notice(message,error=false){const n=el('notice');n.hidden=!message;n.classList.toggle('error',error);n.textContent=message||'';}
 function clear(node){node.replaceChildren();}
@@ -21,7 +21,7 @@ function lock(){
  token=null;currentRole=null;el('workspace').hidden=true;el('signin').hidden=false;
  for(const id of ['student','teacher','parent','admin'])el(id).hidden=true;
  clear(el('submissions'));clear(el('studentResult'));clear(el('cohort'));
- writingOptions=[];clear(el('writingOption'));el('writingText').value='';el('writingPrompt').textContent='Select a topic to view the instructions.';
+ writingOptions=[];pendingRequestId=null;clear(el('writingOption'));el('writingText').value='';el('writingPrompt').textContent='Select a topic to view the instructions.';
 }
 async function openPortal(accessToken){
  token=accessToken;const me=await api('/auth/me');currentRole=me.role;
@@ -49,6 +49,7 @@ async function loadWritingOptions(){
  }catch(error){placeholder.textContent='Topics unavailable';notice(error.message,true);}
 }
 el('writingOption').addEventListener('change',()=>{
+ pendingRequestId=null;
  const raw=el('writingOption').value;
  const option=writingOptions.find(o=>[o.topicVersionId,o.batchId,o.programId].join('|')===raw);
  const prompt=el('writingPrompt');clear(prompt);
@@ -62,8 +63,9 @@ el('writingOption').addEventListener('change',()=>{
  }
 });
 el('writingText').addEventListener('input',()=>{
+ pendingRequestId=null;
  const text=el('writingText').value;
- el('writingCount').textContent=text.length+' characters · '+(text.trim()?text.trim().split(/\\s+/u).length:0)+' whitespace-separated words';
+ el('writingCount').textContent=text.length+' characters · '+(text.trim()?text.trim().split(/\s+/u).length:0)+' whitespace-separated words';
 });
 el('writingForm').addEventListener('submit',async event=>{
  event.preventDefault();notice('');
@@ -75,10 +77,10 @@ el('writingForm').addEventListener('submit',async event=>{
  try{
   const submitted=await api('/submissions/typed',{method:'POST',data:{
    programId:option.programId,batchId:option.batchId,topicVersionId:option.topicVersionId,
-   clientRequestId:crypto.randomUUID(),text}});
-  el('writingText').value='';el('writingCount').textContent='0 characters';
-  notice('Submission '+submitted.submissionId.slice(0,8)+' accepted. Assessment status: '+submitted.status+'. No score is assumed.');
+   clientRequestId:(pendingRequestId??=crypto.randomUUID()),text}});
+  el('writingText').value='';pendingRequestId=null;el('writingCount').textContent='0 characters';
   await studentSubmissions();
+  notice('Submission '+submitted.submissionId.slice(0,8)+' accepted. Assessment status: '+submitted.status+'. No score is assumed.');
  }catch(error){notice(error.message,true);}
  finally{button.disabled=false;}
 });
