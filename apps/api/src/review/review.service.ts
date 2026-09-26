@@ -20,7 +20,7 @@ export class HumanReviewService {
       understanding:true,effectiveScoreRevision:true}});
     if(!a||!a.submission.verifiedText||!a.understanding)throw new NotFoundException('Reviewable assessment not available');
     const s=a.submission;
-    if(s.status!=='ACCEPTED'||a.understanding.verifiedTextHash!==s.verifiedText.contentHash||
+    if(s.status!=='ACCEPTED'||a.understanding.verifiedTextHash!==s.verifiedText!.contentHash||
       a.understanding.rubricHash!==s.rubricHash||a.understanding.topicHash!==s.topicHash||
       understandingHash(a.understanding.snapshot as unknown as HumanUnderstanding)!==a.understanding.snapshotHash)
       throw new ConflictException('Academic source snapshot changed');
