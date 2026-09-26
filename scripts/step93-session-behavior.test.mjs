@@ -63,6 +63,16 @@ test('old 401 cannot sign out a newer account; body parsing is fenced too',async
  h.run('pending[1]')({ok:true,json:()=>body.promise});await flush();h.run('lock()');body.resolve({private:'old'});
  assert.equal((await pending).name,'StaleRequestError');
 });
+test('late body parse errors never surface old response content',async()=>{
+ const h=harness(()=>response({},401));await flush();
+ let rejectBody;
+ const body=new Promise((_,reject)=>{rejectBody=reject;});
+ h.run('globalThis.pending=[];fetch=()=>new Promise(resolve=>pending.push(resolve))');
+ const pending=h.run('api("/body")').catch(e=>e);
+ h.run('pending[0]')({ok:true,json:()=>body});await flush();h.run('lock()');
+ rejectBody(new Error('OLD PRIVATE RESPONSE CONTENT'));
+ assert.equal((await pending).name,'StaleRequestError');
+});
 test('family pagination passes the server cursor and displays pending without invented marks',async()=>{
  const h=harness(path=>path==='/auth/refresh'?response({},401):response(parentPage('PAGE',id)));await flush();
  await h.run('parentAssessments()');assert.equal(h.el('parentNext').hidden,false);

@@ -24,7 +24,10 @@ async function api(path,{method='GET',data=null,asBlob=false,allowAnonymous=fals
    throw new Error(response.status===403||response.status===404?'This record is unavailable to your current account.':
     response.status===429?'Too many requests. Please try again later.':
     response.status===409&&asBlob?'This report cannot be exported yet. English printable reports only; your score remains available here.':'Request failed ('+response.status+').');}
- const body=await (asBlob?response.blob():response.json());current();return body;
+ let body;
+ try{body=await (asBlob?response.blob():response.json());}
+ catch{current();throw new Error('The response could not be read. Please refresh.');}
+ current();return body;
 }
 function lock(){
  requests.invalidate();token=null;currentRole=null;el('workspace').hidden=true;el('signin').hidden=false;
