@@ -133,6 +133,40 @@ export class ProjectionService {
           details:{revisionId:revision.id,target:job.target,scope:'VERSION_PINNED'}}});
         return {status:'REBUILT',target:job.target,revisionId:revision.id};
       }
+      // Pilot-only cohort fanout: a NEW comparable assessment makes an older progress
+      // snapshot stale even when that old assessment's own revision has not changed.
+      // No receipt is faked: refresh only after recomputing the full current cohort.
+      // At scale replace this bounded-pilot scan with scope-keyed durable invalidations.
+      const prior=await tx.progressProjection.findMany({
+        ...(assessmentId?{where:{assessmentId}}:{}),
+        select:{assessmentId:true,scoreRevisionId:true,cohortSignature:true},
+        orderBy:{updatedAt:'asc'}
+      });
+      for(const old of prior){
+        const locked=(await tx.$queryRaw<LockedAssessment[]>`
+          SELECT id,"effectiveScoreRevisionId",status::text AS status FROM "Assessment"
+          WHERE id=${old.assessmentId}::uuid FOR UPDATE SKIP LOCKED`)[0];
+        if(!locked||locked.status!=='FINALIZED'||locked.effectiveScoreRevisionId!==old.scoreRevisionId)
+          continue;
+        const row=(await tx.$queryRaw<Array<{scoreRevisionId:string;cohortSignature:string}>>`
+          SELECT "scoreRevisionId","cohortSignature" FROM "ProgressProjection"
+          WHERE "assessmentId"=${old.assessmentId}::uuid FOR UPDATE SKIP LOCKED`)[0];
+        if(!row||row.scoreRevisionId!==locked.effectiveScoreRevisionId)continue;
+        const own=await tx.assessment.findUniqueOrThrow({where:{id:old.assessmentId},
+          select:{submission:{select:{studentId:true,programId:true,rubricVersionId:true}}}});
+        const points=await this.comparable(tx,own.submission.studentId,
+          own.submission.programId,own.submission.rubricVersionId);
+        const signature=hash(comparableSignature(points));
+        if(signature===row.cohortSignature)continue;
+        const snapshot=buildComparableProgress(row.scoreRevisionId,points,signature);
+        await tx.progressProjection.update({where:{assessmentId:old.assessmentId},
+          data:{cohortSignature:signature,snapshot:snapshot as unknown as Prisma.InputJsonValue,
+            updatedAt:new Date()}});
+        await tx.auditEvent.create({data:{action:'PROGRESS_COHORT_RECOMPUTED',
+          resourceType:'Assessment',resourceId:old.assessmentId,
+          details:{revisionId:row.scoreRevisionId,scope:'FULL_COMPARABLE_COHORT'}}});
+        return {status:'REFRESHED',target:'PROGRESS',revisionId:row.scoreRevisionId};
+      }
       return {status:'EMPTY'};
     },{isolationLevel:Prisma.TransactionIsolationLevel.ReadCommitted,timeout:16000});
   }
