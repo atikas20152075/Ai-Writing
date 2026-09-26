@@ -19,3 +19,12 @@ test('preview never persists a bearer token or manufactures scores',()=>{
  assert.ok(markup.includes('autocomplete="current-password"'));
  assert.ok(css.includes('prefers-reduced-motion'));
 });
+
+test('typed editor uses scoped catalog, never fabricates a result, and retries idempotently',()=>{
+ assert.ok(app.includes('/submissions/mine/writing-options'));
+ assert.ok(app.includes("api('/submissions/typed'"));
+ assert.ok(app.includes('pendingRequestId??=crypto.randomUUID()'));
+ assert.ok(markup.includes('id="writingForm"'));
+ assert.ok(markup.includes('id="writingPrompt"'));
+ assert.ok(markup.includes('maxlength="24000"'));
+});
