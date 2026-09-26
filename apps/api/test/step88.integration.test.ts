@@ -133,6 +133,10 @@ test('Step88 private synthetic runner persists PASS once and canonical student s
     assert.equal(await tx.aIExaminerRun.count({where:{assessmentId:f.assessment.id}}),1);
     assert.equal(await tx.assessmentScoreRevision.count({where:{assessmentId:f.assessment.id}}),1);
     assert.equal((await svc.process(f.assessment.id,syntheticGateway({assessmentId:f.assessment.id,inputHash:context.inputHash}))).state,'NO_ACTION');
+    const initialInvalidations=await tx.derivedProjectionInvalidation.findMany({where:{assessmentId:f.assessment.id}});
+    assert.deepEqual(initialInvalidations.map(x=>x.target).sort(),
+      ['FEEDBACK','PARENT','PRACTICE','PROGRESS','REPORT','TEACHER']);
+    assert.ok(initialInvalidations.every(x=>x.status==='PENDING'));
     assert.equal(await tx.outboxEvent.count({where:{eventType:'ASSESSMENT_SCORE_FINALIZED'}}),1);
   });
 });
