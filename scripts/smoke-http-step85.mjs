@@ -78,6 +78,12 @@ assert.equal(initialScore.data.result,null);
 assert.equal(initialScore.data.status,'AWAITING_UNDERSTANDING');
 await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
   {token:studentToken},404,'unfinalized student cannot generate a report');
+// Each authenticated export request consumes the same shared actor budget, even
+// when this synthetic unfinalized report cannot be rendered. No student work leaves localhost.
+for(let i=0;i<11;i++)await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
+ {token:studentToken},404,'failed report exports consume the shared budget');
+await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
+ {token:studentToken},429,'thirteenth report request is throttled');
 await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
   {token:adminToken},404,'SUPER_ADMIN cannot bypass canonical report and academic scope');
 await expectStatus(`/academic/cohorts/${batchId}/assessments`,
