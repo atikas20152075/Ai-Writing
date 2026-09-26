@@ -58,3 +58,7 @@ Score revisions now generate six durable invalidations, including initial verifi
 ## Step 91 — Revision-pinned learning read models
 
 Actual deterministic **rubric feedback**, **practice rewrite targets** and **same-rubric descriptive progress** are now versioned against the canonical effective score. Older materializations and changed comparable cohorts are withheld. Unsupported teacher/dashboard and PDF/report generation remain explicitly unavailable. See [Step91 engineering scope](docs/step91-revision-pinned-learning.md). No live AI, real student data or production deployment is configured.
+
+## Step 92 — Restricted teacher scores and canonical private JSON reporting
+
+Current batch-scoped teacher academic score monitoring and revision-immutable student/verified-guardian report JSON are implemented in the development branch. **No full teacher UI or PDF generator yet.** [Step 92 limits and tests](docs/step92-teacher-versioned-report.md).

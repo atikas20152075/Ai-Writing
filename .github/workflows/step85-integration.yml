@@ -1,5 +1,5 @@
-# Synthetic-only Step91 API/DB/AI/revision-pinned learning contract validation. NEVER deploy or invoke a real provider.
-name: "Backend integrity: Step 91"
+# Synthetic-only Step92 API/DB/AI/revision-pinned learning contract validation. NEVER deploy or invoke a real provider.
+name: "Backend integrity: Step 92"
 on:
   push:
     branches: [main]

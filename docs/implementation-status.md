@@ -50,3 +50,7 @@ Implemented a guarded, transactional minimal parent-score read-model rebuild, re
 ## Step 91 — Deterministic rubric feedback, practice targets and descriptive progress
 
 Revision-pinned FEEDBACK/PRACTICE/PROGRESS materialization is now implemented in a development branch with strict original-writing evidence validation, immutable rubric scoring, cohort fingerprint freshness checks, SQL rejection of forged REBUILT receipts and a student-only learning endpoint. TEACHER/REPORT remain unsupported. Verified synthetic integration: [Step91 CI 36246662867](https://github.com/atikas20152075/Ai-Writing/actions/runs/36246662867) PASSED: 126 Node tests including 39 PostgreSQL tests, 47 synthetic loopback HTTP checks and 11 fully mocked Python tests; expert bilingual scoring, actual AI-written feedback, personalized questions and production rollout are not implemented. See [Step91 details](step91-revision-pinned-learning.md).
+
+## Step 92 — Scoped teacher monitoring and immutable report snapshot
+
+New teacher batch monitoring checks live assignment/enrollment/core processing authority; never trusts cached scores. Report snapshots are immutable, pinned to approved revisions and served only after current student/guardian reauthorization. PDF, object-storage delivery and a frontend teacher dashboard remain **not implemented**. CI evidence: see [Step92](step92-teacher-versioned-report.md).
