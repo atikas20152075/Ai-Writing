@@ -26,6 +26,7 @@ jobs:
     env:
       NODE_ENV: test
       DATABASE_URL: postgresql://writing_ci:synthetic_ci_password@localhost:5432/writing_test?schema=public
+      AUTH_ABUSE_KEY: SYNTHETIC_CI_ONLY_AUTH_RATE_HMAC_KEY_-_NEVER_REUSE_ON_ANY_REAL_ENVIRONMENT_12345
       WEB_ORIGIN: http://localhost:3000
       JWT_SECRET: synthetic_ci_only_64_char_or_longer_secret_never_use_this_in_production_123456
       PORT: '3001'
@@ -50,6 +51,17 @@ jobs:
           else
             echo 'WARNING: Bootstrap only: no committed package-lock.json. This is NOT a reproducible release.'
             npm install --no-audit --no-fund
+          fi
+      - name: Emit bootstrap lockfile for reviewed source-control commit
+        if: ${{ hashFiles('package-lock.json') != '' }}
+        shell: bash
+        run: |
+          # The lockfile is public dependency metadata only. No CI secrets.
+          if ! git ls-files --error-unmatch package-lock.json >/dev/null 2>&1; then
+            echo 'BEGIN_STEP86_LOCKFILE_BASE64'
+            base64 -w0 package-lock.json
+            echo
+            echo 'END_STEP86_LOCKFILE_BASE64'
           fi
       - name: TypeScript domain and pure-policy checks
         run: |
