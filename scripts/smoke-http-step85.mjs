@@ -76,6 +76,14 @@ const initialScore=await expectStatus(`/assessments/mine/${submitted.data.assess
   {token:studentToken},200,'pending score never fabricated');
 assert.equal(initialScore.data.result,null);
 assert.equal(initialScore.data.status,'AWAITING_UNDERSTANDING');
+await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
+  {token:studentToken},404,'unfinalized student cannot generate a report');
+await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
+  {token:adminToken},404,'SUPER_ADMIN cannot bypass canonical report and academic scope');
+await expectStatus(`/academic/cohorts/${batchId}/assessments`,
+  {token:studentToken},403,'student cannot use academic cohort dashboard');
+await expectStatus(`/academic/cohorts/${batchId}/assessments`,
+  {token:adminToken},403,'SUPER_ADMIN is not an assigned academic reviewer');
 const pendingProjections=await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections`,
   {token:studentToken},200,'pending student projections cannot fake rebuilt analytics');
 assert.equal(pendingProjections.data.projections.length,6);
@@ -100,6 +108,8 @@ const other=await expectStatus('/auth/register',post('/auth/register',{email:`sy
 await expectStatus(`/submissions/mine/${submitted.data.submissionId}`,{token:other.data.accessToken},404,'cross-student access denied');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/result`,
   {token:other.data.accessToken},404,'cross-student result access denied');
+await expectStatus(`/reports/assessments/${submitted.data.assessmentId}/pdf`,
+  {token:other.data.accessToken},404,'cross-student cannot generate another child report');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections`,
   {token:other.data.accessToken},404,'cross-student projection status access denied');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/learning`,
