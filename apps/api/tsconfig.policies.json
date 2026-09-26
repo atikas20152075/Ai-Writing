@@ -16,6 +16,9 @@
     "src/projections/projection-policy.ts",
     "test/projection-policy.test.ts",
     "src/projections/learning-builders.ts",
-    "test/learning-builders.test.ts"
+    "test/learning-builders.test.ts",
+    "src/reports/report-policy.ts",
+    "src/reports/english-pdf.ts",
+    "test/report-policy.test.ts"
   ]
 }
