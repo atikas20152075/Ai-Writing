@@ -85,6 +85,15 @@ const pendingLearning=await expectStatus(`/assessments/mine/${submitted.data.ass
 assert.equal(pendingLearning.data.learning.feedback,null);
 assert.equal(pendingLearning.data.learning.practice,null);
 assert.equal(pendingLearning.data.learning.progress,null);
+const pendingStep92=await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/report`,
+  {token:studentToken},200,'Step92 never publishes report before grading');
+assert.equal(pendingStep92.data.status,'PENDING');
+assert.equal(pendingStep92.data.report,null);
+assert.equal(pendingStep92.data.pdfStatus,'NOT_IMPLEMENTED');
+await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/report`,
+  {token:adminToken},403,'super admin cannot bypass student-only private report');
+await expectStatus(`/teachers/me/batches/${batchId}/assessments`,
+  {token:adminToken},403,'unassigned super admin cannot browse teacher academic dashboard');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections`,
   {token:adminToken},403,'admin cannot use student-only projection status');
 const replay=await expectStatus('/submissions/typed',post('/submissions/typed',submissionBody,studentToken),201,'idempotent retry');
@@ -104,6 +113,8 @@ await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/projections
   {token:other.data.accessToken},404,'cross-student projection status access denied');
 await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/learning`,
   {token:other.data.accessToken},404,'cross-student learning material access denied');
+await expectStatus(`/assessments/mine/${submitted.data.assessmentId}/report`,
+  {token:other.data.accessToken},404,'other student cannot see version-pinned report');
 await expectStatus('/submissions/typed',post('/submissions/typed',{...submissionBody,clientRequestId:randomUUID()},other.data.accessToken),403,'unenrolled student is denied');
 
 // Rotation and reuse tests are intentionally sequential here; parallel test belongs in DB-backed auth suite.
