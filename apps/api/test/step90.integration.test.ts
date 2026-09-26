@@ -204,4 +204,48 @@ test('learning endpoint cannot disclose another student academic material',{skip
     /Not Found|NotFound/i);
  });
 });
+
+test('a new comparable assessment invalidates and proactively refreshes an older progress cohort',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
+  for(let i=0;i<4;i++)assert.equal((await f.projections.processOne(f.assessment.id)).status,'REBUILT');
+  const initial=await f.projections.statusForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal(initial.projections.find(x=>x.target==='PROGRESS')?.availability,'CURRENT');
+  const first=await tx.assessment.findUniqueOrThrow({where:{id:f.assessment.id},
+    include:{submission:{include:{verifiedText:true}}}});
+  const s=first.submission;
+  const nextSubmission=await tx.submission.create({data:{
+    studentId:s.studentId,programId:s.programId,batchId:s.batchId,
+    topicVersionId:s.topicVersionId,rubricVersionId:s.rubricVersionId,
+    clientRequestId:randomUUID(),topicSnapshot:s.topicSnapshot,
+    rubricSnapshot:s.rubricSnapshot,topicHash:s.topicHash,rubricHash:s.rubricHash
+  }});
+  const verified=await tx.verifiedWritingText.create({data:{
+    submissionId:nextSubmission.id,language:'ENGLISH',content:'I like books.',
+    contentHash:hash('I like books.'),verifiedById:f.user.id
+  }});
+  const next=await tx.assessment.create({data:{submissionId:nextSubmission.id}});
+  const understanding=new AssessmentPersistenceService({$transaction:async(cb:any)=>cb(tx)} as any);
+  await understanding.publishHumanUnderstanding({assessmentId:next.id,reviewerId:f.a.id,
+    observations:[{category:'IDEA',finding:'Synthetic approved comparable observation.',
+      evidence:{startOffset:7,endOffset:12,exactQuote:'books',claim:'Student mentions books'}}]});
+  await tx.assessment.update({where:{id:next.id},data:{status:'HUMAN_REVIEW'}});
+  const opened=await f.reviews.open(actor(f.a),next.id,reason);
+  await f.reviews.propose(actor(f.a),opened.caseId,factors('c4','4'),reason);
+  await f.reviews.decide(actor(f.b),opened.caseId,'APPROVE',reason);
+  const stale=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal(stale.projections.find(x=>x.target==='PROGRESS')?.availability,'STALE');
+  assert.equal((stale as any).learning.progress,null);
+  const refreshed=await f.projections.processOne(f.assessment.id);
+  assert.equal(refreshed.status,'REFRESHED');
+  assert.equal(refreshed.target,'PROGRESS');
+  const current=await f.projections.learningForAuthorizedStudent(f.user.id,f.assessment.id);
+  assert.equal(current.projections.find(x=>x.target==='PROGRESS')?.availability,'CURRENT');
+  assert.equal((current as any).learning.progress.comparableCount,2);
+  assert.equal((current as any).learning.progress.status,'DESCRIPTIVE_DELTA');
+  assert.equal(await tx.derivedProjectionInvalidation.count({where:{
+    assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,status:'REBUILT'}}),4);
+ });
+});
+
 test.after(async()=>{if(db)await db.$disconnect();});
