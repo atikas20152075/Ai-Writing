@@ -7,7 +7,7 @@ The merged Step92 milestone is **synthetic-tested development-only**. This check
 - [x] On-demand English ASCII-only, revision-pinned printable PDF from approved immutable factor results.
 - [x] Current-authorization check inside the report transaction and SQL-guarded immutable snapshot/hash.
 - [x] Existing disposable-PostgreSQL synthetic CI for permissions, revocation, revision supersession and PDF integrity.
-- [ ] Merge and verify PR #10 pseudonymous actor-wide cross-replica PDF export rate limit and tests.
+- [x] PR #10 merged: pseudonymous actor-wide cross-replica PDF export rate limit and pure/synthetic HTTP tests; CI [run 36255284609](https://github.com/atikas20152075/Ai-Writing/actions/runs/36255284609) passed. Production stress/security review remains pending.
 
 ## Remaining production gates — BLOCK RELEASE until independently evidenced
 - [ ] Select legally redistributable Bangla-capable fonts, establish font source/version/license, embed/subset and render mixed Bangla-English scripts; visually QA shaping, line wrapping and evidence quotes with expert-reviewed fixtures.
