@@ -42,3 +42,7 @@ Implemented a fixed-endpoint Responses API adapter, strict Pydantic scoring/evid
 ## Step 89 — Two-person human scoring and appeal mechanics (development)
 
 Implementation source: [Step89 reviewer and revision design](step89-human-score-revisions.md). Program-scoped academic reviewer grants, current verified student/guardian appeals, immutable factor-wise human proposals, independent approval/rejection/uphold, DB-guarded append-only HUMAN revisions, update of the single effective score pointer and six explicit PENDING derived-projection invalidation targets are implemented. Synthetic SQL tests exercise actual PostgreSQL triggers and reviewer revocation; only code/logic readiness is claimed. Human review UI, automated rebuilding of Feedback/Practice/Progress/Teacher/Parent/Report projections, independent academic benchmark validation, approved processing of real child manuscripts and production deployment remain BLOCKED.
+
+## Step 90 — Version-aware propagation (development)
+
+Implemented a guarded, transactional minimal parent-score read-model rebuild, revision-aware student projection-status endpoint, initial-AI six-target invalidation, and explicit BLOCKED statuses for unimplemented FEEDBACK/PRACTICE/PROGRESS/TEACHER/REPORT consumers. Detailed limitations and (when obtained) verified CI evidence: [Step90](step90-projection-freshness.md). All testing is synthetic; never treat a BLOCKED target or stale report as CURRENT.

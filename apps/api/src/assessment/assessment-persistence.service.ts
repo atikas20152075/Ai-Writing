@@ -6,6 +6,7 @@ import {hash,createVerifiedText,lockAssessmentContext,validatePublishedRubric,
   finalizeApprovedAssessment,type LockedContext,type PublishedRubric} from '../../../../packages/domain/src/index.ts';
 import {canonicalJson} from '../policies/submission-policy.ts';
 import {PrismaService} from '../prisma/prisma.service.ts';
+import {projectionTargets} from '../projections/projection-policy.ts';
 import {AIGatewayClient,AIContractError,type AIResult,type TopicSnapshot} from '../ai/ai-gateway-client.ts';
 import {checkedSnapshot,requireLiveAIApproval,
   understandingHash,validateHumanUnderstanding,validatePersistedAIResult,
@@ -205,6 +206,9 @@ export class AssessmentPersistenceService {
         factorResults:proposed.factorResults as unknown as Prisma.InputJsonValue,source:'AI'}});
       await tx.assessment.update({where:{id:assessment.id},data:{status:'FINALIZED',effectiveScoreRevisionId:revision.id}});
       await tx.aIProcessingAttempt.update({where:{id:attempt.id},data:{status:'COMPLETED'}});
+      // Same transaction as finalization: never leave an AI score without downstream invalidation.
+      await tx.derivedProjectionInvalidation.createMany({data:projectionTargets.map(target=>({
+        assessmentId:assessment.id,scoreRevisionId:revision.id,target,status:'PENDING'})),skipDuplicates:true});
       await tx.outboxEvent.create({data:{eventType:'ASSESSMENT_SCORE_FINALIZED',
         dedupeKey:`score-revision-${revision.id}`,payload:{assessmentId:assessment.id,revisionId:revision.id}}});
       await tx.auditEvent.create({data:{action:'AI_SCORE_VERIFIED_FINALIZATION',

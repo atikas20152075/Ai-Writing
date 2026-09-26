@@ -299,6 +299,7 @@ model Assessment {
   scoreRevisions         AssessmentScoreRevision[] @relation("AssessmentRevisions")
   effectiveScoreRevisionId String? @unique @db.Uuid
   effectiveScoreRevision AssessmentScoreRevision? @relation("EffectiveScoreRevision", fields: [effectiveScoreRevisionId], references: [id], onDelete: Restrict)
+  parentScoreProjection ParentScoreProjection?
   // Published scores are possible only through the Step88 guarded transaction and DB trigger.
 }
 model OutboxEvent {
@@ -443,6 +444,7 @@ model AssessmentScoreRevision {
   verification    AIVerificationAttempt? @relation(fields: [verificationId], references: [id], onDelete: Restrict)
   effectiveFor    Assessment? @relation("EffectiveScoreRevision")
   @@unique([assessmentId, revisionNo])
+  parentUses ParentScoreProjection[]
   @@unique([examinerRunId])
 }
 
@@ -514,8 +516,23 @@ model DerivedProjectionInvalidation {
   scoreRevisionId String @db.Uuid
   target String
   status String @default("PENDING")
+  errorCode String?
   createdAt DateTime @default(now())
   processedAt DateTime?
   @@unique([assessmentId,scoreRevisionId,target])
   @@index([status,createdAt])
+}
+
+// Minimal actual parent summary. All other Step90 targets remain explicitly unsupported.
+model ParentScoreProjection {
+  assessmentId String @id @db.Uuid
+  scoreRevisionId String @db.Uuid
+  revisionNo Int
+  source String
+  totalScore Decimal @db.Decimal(12,4)
+  totalMarks Decimal @db.Decimal(12,4)
+  updatedAt DateTime @default(now())
+  assessment Assessment @relation(fields:[assessmentId],references:[id],onDelete:Restrict)
+  scoreRevision AssessmentScoreRevision @relation(fields:[scoreRevisionId],references:[id],onDelete:Restrict)
+  @@index([scoreRevisionId])
 }
