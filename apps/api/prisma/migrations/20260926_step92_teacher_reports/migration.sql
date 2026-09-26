@@ -37,14 +37,18 @@ END $$;
 CREATE TRIGGER "TeacherScoreProjection_guard" BEFORE INSERT OR UPDATE ON "TeacherScoreProjection"
  FOR EACH ROW EXECUTE FUNCTION step92_guard_teacher_score();
 
-CREATE FUNCTION step92_guard_report() RETURNS trigger LANGUAGE plpgsql AS $$
+CREATE FUNCTION step92_guard_report() RETURNS trigger LANGUAGE plpgsql AS $
 DECLARE r RECORD;
 BEGIN
  IF TG_OP='UPDATE' OR TG_OP='DELETE' THEN
    RAISE EXCEPTION 'STEP92_REPORT_SNAPSHOT_IMMUTABLE';
  END IF;
- SELECT rev.id,rev."revisionNo",rev.source,rev."totalScore",rev."totalMarks" INTO r
+ SELECT rev.id,rev."revisionNo",rev.source,rev."totalScore",rev."totalMarks",
+   rev."factorResults",s."rubricVersionId",s."topicVersionId",v.language
+ INTO r
  FROM "Assessment" a JOIN "AssessmentScoreRevision" rev ON rev.id=a."effectiveScoreRevisionId"
+ JOIN "Submission" s ON s.id=a."submissionId"
+ JOIN "VerifiedWritingText" v ON v."submissionId"=s.id
  WHERE a.id=NEW."assessmentId" AND a.status='FINALIZED'
   AND rev."assessmentId"=a.id AND rev.id=NEW."scoreRevisionId" FOR UPDATE OF a;
  IF NOT FOUND OR
@@ -53,7 +57,11 @@ BEGIN
    NEW.snapshot->>'revisionNo' IS DISTINCT FROM r."revisionNo"::text OR
    NEW.snapshot->>'source' IS DISTINCT FROM r.source OR
    NEW.snapshot->>'totalScore' IS DISTINCT FROM r."totalScore"::text OR
-   NEW.snapshot->>'totalMarks' IS DISTINCT FROM r."totalMarks"::text
+   NEW.snapshot->>'totalMarks' IS DISTINCT FROM r."totalMarks"::text OR
+   NEW.snapshot->'factors' IS DISTINCT FROM r."factorResults" OR
+   NEW.snapshot->>'rubricVersionId' IS DISTINCT FROM r."rubricVersionId"::text OR
+   NEW.snapshot->>'topicVersionId' IS DISTINCT FROM r."topicVersionId"::text OR
+   NEW.snapshot->>'writingLanguage' IS DISTINCT FROM r.language::text
  THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL'; END IF;
  RETURN NEW;
 END $$;
