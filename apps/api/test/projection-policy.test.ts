@@ -23,3 +23,14 @@ test('unsupported modules remain UNAVAILABLE rather than pretending to rebuild',
   assert.equal(availability.filter(x=>x.availability==='UNAVAILABLE').length,5);
   assert.equal(availability.find(x=>x.target==='PARENT')?.availability,'STALE');
 });
+
+test('Step91 only claims eligible implemented learning targets, never teacher or report',()=>{
+ assert.equal(decideProjectionWork('FEEDBACK','r','r',true),'PUBLISH_FEEDBACK');
+ assert.equal(decideProjectionWork('PRACTICE','r','r',true),'PUBLISH_PRACTICE');
+ assert.equal(decideProjectionWork('PROGRESS','r','r',true),'PUBLISH_PROGRESS');
+ assert.equal(decideProjectionWork('TEACHER','r','r',true),'BLOCKED');
+ assert.equal(decideProjectionWork('REPORT','r','r',true),'BLOCKED');
+ const receipts=[{target:'FEEDBACK',scoreRevisionId:'r',status:'REBUILT'}];
+ assert.equal(projectionAvailability('r',receipts,null,{FEEDBACK:'r'})[0].availability,'CURRENT');
+ assert.equal(projectionAvailability('r',receipts,null,{FEEDBACK:'old'})[0].availability,'STALE');
+});
