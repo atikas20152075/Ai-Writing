@@ -20,7 +20,7 @@ export class TeacherDashboardService{
   return this.db.$transaction(async tx=>{
    const batch=await tx.batch.findUnique({where:{id:batchId},select:{id:true,programId:true}});
    if(!batch)throw new NotFoundException();
-   const user=await tx.user.findUnique({where:{id:actor.userId},select:{role:true,status:true}});
+   const user=await tx.user.findUnique({where:{id:actor.userId},select:{id:true,role:true,status:true}});
    if(!user||user.status!=='ACTIVE'||user.role!==actor.role)throw new NotFoundException();
    if(user.role==='TEACHER'){
     const assignment=await tx.teacherBatch.findFirst({where:{teacherId:user.id,batchId,
