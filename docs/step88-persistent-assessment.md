@@ -12,6 +12,12 @@
 6. Private opt-in `apps/worker/src/assessment-job-consumer.ts` handles **only** `ASSESSMENT_CONTEXT_APPROVED` as a model call. `SUBMISSION_ACCEPTED` never causes a model call without the reviewed Understanding. The worker refuses to start without reviewed flags and internal service configuration. The existing outbox dispatcher must also be deliberately enabled once a tested consumer is deployed; the queue and worker are not deployed in this milestone.
 7. A new student-only authenticated `GET /api/v1/assessments/mine/:id/result` endpoint returns `result:null` while pending/reviewing. It reads only the canonical effective revision after `FINALIZED` and denies cross-student results. Teacher/guardian score-reporting endpoints are separate, future authorization-reviewed work.
 
+## Verified synthetic CI and input-hash correction
+
+The approved assessment input hash is now generated with order-independent canonical JSON serialization in the domain layer. PostgreSQL JSONB can reorder nested rubric properties; the previous plain `JSON.stringify` calculation produced different hashes for equivalent approved rubrics and blocked a legitimate persisted run. A dedicated domain regression test reproduces and prevents this defect. This is a deliberate contract change **before any real finalized score exists**; future persisted contexts must pin the domain contract version during upgrades.
+
+[GitHub Actions synthetic integration run 36239714330](https://github.com/atikas20152075/Ai-Writing/actions/runs/36239714330) passed: 19 domain, 24 auth/access, 8 AI bridge, 10 static, 10 new assessment pure-policy and 19 PostgreSQL tests; 42 synthetic HTTP checks and 11 mocked Python tests. No external model was called. This run validates mechanics and integrity, not academic scoring validity.
+
 ## Independent academic/security limits
 
 - Synthetic fixtures **are not** expert benchmarks, proof of external vendor/privacy approval, real model evaluations, or real children's data. Test-only approval references are explicitly labelled SYNTHETIC and may not be copied into deployment configuration.
