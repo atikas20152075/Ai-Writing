@@ -46,3 +46,7 @@ Implementation source: [Step89 reviewer and revision design](step89-human-score-
 ## Step 90 — Version-aware propagation (development)
 
 Implemented a guarded, transactional minimal parent-score read-model rebuild, revision-aware student projection-status endpoint, initial-AI six-target invalidation, and explicit BLOCKED statuses for unimplemented FEEDBACK/PRACTICE/PROGRESS/TEACHER/REPORT consumers. Detailed limitations and (when obtained) verified CI evidence: [Step90](step90-projection-freshness.md). Verified synthetic CI: [run 36245550983](https://github.com/atikas20152075/Ai-Writing/actions/runs/36245550983) PASSED (116 Node tests including 35 database tests, 45 loopback HTTP checks and 11 mocked Python tests). All testing is synthetic; never treat a BLOCKED target or stale report as CURRENT.
+
+## Step 91 — Deterministic rubric feedback, practice targets and descriptive progress
+
+Revision-pinned FEEDBACK/PRACTICE/PROGRESS materialization is now implemented in a development branch with strict original-writing evidence validation, immutable rubric scoring, cohort fingerprint freshness checks, SQL rejection of forged REBUILT receipts and a student-only learning endpoint. TEACHER/REPORT remain unsupported. **Actual passing CI evidence is mandatory before merging or claiming test success**; expert bilingual scoring, actual AI-written feedback, personalized questions and production rollout are not implemented. See [Step91 details](step91-revision-pinned-learning.md).
