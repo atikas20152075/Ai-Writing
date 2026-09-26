@@ -38,3 +38,7 @@ RUN_POSTGRES_INTEGRATION=1 npm --workspace apps/api run test:db
 ```
 
 Review `.github/workflows/step85-integration.yml` and `docs/implementation-status.md` for exact tested CI execution. The active workflow is named for Step 85 for historical continuity; Step 86 extends it. No production deployment is configured.
+
+## Step 87 — Gated real-provider integration (development only)
+
+A fixed-endpoint OpenAI Responses HTTP adapter, strict published-rubric/Unicode evidence validation, independent different-model Verifier plus critical challenge, and an internal TypeScript integration client have been added. This **does not finalize marks, use real student data, or imply benchmark-approved AI grading**. See [Step 87 implementation and release blockers](docs/step87-real-ai-examiner-verifier.md).
