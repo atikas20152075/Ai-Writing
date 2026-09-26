@@ -24,6 +24,10 @@
 
 Full pedagogical feedback generation, independently validated new exercises, PFCR correction-and-rewrite execution, trend cohorts across **different rubrics** (currently intentionally excluded), per-learner mastery inference, guardian learning UI, teacher dashboards, private revised PDF exports, data deletion and retention operations, permission-aware notifications, operational dead-letter policy, real expert-reviewed bilingual evaluation and production deployment. No direct payment, live children or external AI inference is involved in these synthetic tests.
 
-## Verification
+## Verified synthetic engineering test evidence
+
+[GitHub Actions run 36246662867](https://github.com/atikas20152075/Ai-Writing/actions/runs/36246662867) PASSED on disposable PostgreSQL 17 with pinned npm dependencies: **126 Node tests** (including **39 PostgreSQL integration tests** and six policy/builder test groups), **47 synthetic loopback HTTP checks** and **11 fully mocked Python AI-service tests**. Full migrations, Prisma generation and API/worker type checks passed. A cross-assessment database test first demonstrated the new cohort invalidates an older progress view, then confirmed the pilot rebuilder refreshes the old version after draining unsupported jobs. No live AI, real manuscripts or production deployment was involved.
+
+## Reproducibility
 
 GitHub CI must pass locked dependencies, Prisma migrations, NestJS API/worker typechecking, pure deterministic builder and policy tests, version-aware PostgreSQL integration including forged completion and superseded revisions, student-only loopback HTTP access checks, and fully mocked Python AI-service tests. Attach the exact passing run before marking an implementation as verified; green synthetic CI does not validate real academic model quality.
