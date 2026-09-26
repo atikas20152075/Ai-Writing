@@ -6,7 +6,7 @@
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
-- [Step 72 Error Intelligence design](docs/step72-error-intelligence.md)
+- [Step 72 detailed Error Intelligence architecture](docs/step72-error-intelligence.md)
 - [Detailed later-stage decisions, Steps 73–82](docs/architecture-steps-73-82.md)
 - [Current actual test evidence and remaining release blockers](docs/implementation-status.md)
 - [Step 86 authentication hardening and current plan](docs/step86-auth-integration.md)
@@ -39,6 +39,10 @@ RUN_POSTGRES_INTEGRATION=1 npm --workspace apps/api run test:db
 
 Review `.github/workflows/step85-integration.yml` and `docs/implementation-status.md` for exact tested CI execution. The active workflow is named for Step 85 for historical continuity; Step 86 extends it. No production deployment is configured.
 
-## Step 87 — Gated real-provider integration (development only)
+## Step 87 — Gated provider integration (development only)
 
-A fixed-endpoint OpenAI Responses HTTP adapter, strict published-rubric/Unicode evidence validation, independent different-model Verifier plus critical challenge, and an internal TypeScript integration client have been added. This **does not finalize marks, use real student data, or imply benchmark-approved AI grading**. See [Step 87 implementation and release blockers](docs/step87-real-ai-examiner-verifier.md).
+Implemented a real OpenAI Responses HTTP adapter with strict JSON outputs; an independent different-model Verifier followed by explicit skeptical challenge; duplicate semantic/numerical checks in the trusted Node domain; and a private-only bridge that **never finalizes marks**. Unconfigured service fails closed. See [Step 87 detailed spec](docs/step87-real-ai-examiner-verifier.md) for approval gates and remaining blockers. All tests use synthetic/mock writing; no real external AI grading has been run.
+
+## Step 88 — Durable vetted scoring pipeline (development-only)
+
+Step88 adds reviewed Understanding snapshots, database-guarded immutable Examiner/Verifier results, lease-fenced internal processing, a canonical effective score revision and a student-only finalized-result endpoint. See [Step88 implementation and release blockers](docs/step88-persistent-assessment.md). All local/CI model-output fixtures are synthetic; real external model processing and production score release remain disabled pending expert benchmarks and privacy/vendor authorization.

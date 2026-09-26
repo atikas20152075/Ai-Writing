@@ -1,5 +1,16 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {"noEmit":true,"allowImportingTsExtensions":true},
-  "include": ["src/policies/**/*.ts", "src/ai/**/*.ts", "test/ai-gateway.test.ts", "test/policies.test.ts", "../../packages/domain/src/**/*.ts"]
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "src/policies/**/*.ts",
+    "src/ai/**/*.ts",
+    "test/ai-gateway.test.ts",
+    "test/policies.test.ts",
+    "../../packages/domain/src/**/*.ts",
+    "src/assessment/assessment-policy.ts",
+    "test/assessment-policy.test.ts"
+  ]
 }

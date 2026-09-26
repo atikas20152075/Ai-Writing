@@ -1,5 +1,5 @@
-# Synthetic-only integration validation. Not an application deployment or production approval.
-name: Step 85 backend integration
+# Synthetic-only Step88 API/DB/AI contract validation. NEVER deploy or invoke a real provider.
+name: Backend integrity: Step 88
 on:
   push:
     branches: [main]
@@ -57,6 +57,7 @@ jobs:
         run: |
           npm --workspace apps/api run db:generate
           npm --workspace apps/api run typecheck
+          npm --workspace apps/worker run typecheck
           npm --workspace apps/api run db:migrate
       - name: Database-backed safety tests (never skipped)
         run: RUN_POSTGRES_INTEGRATION=1 npm --workspace apps/api run test:db

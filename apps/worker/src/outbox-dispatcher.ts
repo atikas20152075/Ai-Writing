@@ -18,7 +18,8 @@ async function dispatchOnce():Promise<number>{
   const claimed=await db.$transaction(tx=>tx.$queryRaw<OutboxRow[]>`
     WITH claimed AS (
       SELECT id FROM "OutboxEvent"
-      WHERE "status"='PENDING' OR ("status"='DISPATCHING' AND "lockedAt" < NOW()-INTERVAL '5 minutes')
+      WHERE "eventType" IN ('SUBMISSION_ACCEPTED','ASSESSMENT_CONTEXT_APPROVED')
+      AND ("status"='PENDING' OR ("status"='DISPATCHING' AND "lockedAt" < NOW()-INTERVAL '5 minutes'))
       ORDER BY "createdAt" LIMIT 10 FOR UPDATE SKIP LOCKED
     )
     UPDATE "OutboxEvent" e SET "status"='DISPATCHING',"lockedAt"=NOW(),"attemptCount"="attemptCount"+1
@@ -27,7 +28,7 @@ async function dispatchOnce():Promise<number>{
   `);
   for(const event of claimed){
     try{
-      // Queue delivery is at least once; consumers must dedupe by eventId in PostgreSQL.
+      // Queue delivery is at least once; consumers must dedupe by pinned assessment/run identity in PostgreSQL.
       await queue.add(event.eventType,{eventId:event.id,...(event.payload as object)},{jobId:event.id,attempts:3,backoff:{type:'exponential',delay:1000}});
       await db.outboxEvent.updateMany({where:{id:event.id,status:'DISPATCHING'},data:{status:'DISPATCHED',dispatchedAt:new Date(),lockedAt:null}});
     }catch(e){
