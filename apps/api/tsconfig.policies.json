@@ -11,6 +11,6 @@
     "test/policies.test.ts",
     "../../packages/domain/src/**/*.ts",
     "src/assessment/assessment-policy.ts",
-    "test/assessment-policy.test.ts"
+    "test/assessment-policy.test.ts", "test/review-policy.test.ts"
   ]
 }
