@@ -3,7 +3,7 @@
  * bilingual Unicode fonts in the later dedicated PDF renderer milestone. */
 import {type PrintableReport,reportLines,ReportPolicyError} from './report-policy.ts';
 function escapePdf(s:string):string{return s.replace(/\\/g,'\\\\').replace(/\(/g,'\\(').replace(/\)/g,'\\)');}
-function wrap(line:string,max=82):string[]{
+function wrap(line:string,max=52):string[]{
  if(!/^[\x20-\x7e]*$/.test(line))throw new ReportPolicyError('ENGLISH_ASCII_PDF_ONLY');
  if(!line)return [''];
  const chunks:string[]=[];
