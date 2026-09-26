@@ -1,4 +1,5 @@
 import {Module} from '@nestjs/common';
+import {AcademicViewsModule} from './views/academic-views.module.ts';
 import {AssessmentModule} from './assessment/assessment.module.ts';
 import {HumanReviewModule} from './review/review.module.ts';
 import {PrismaModule} from './prisma/prisma.module.ts';
@@ -10,5 +11,5 @@ import {Controller,Get} from '@nestjs/common';
 @Controller() class HealthController {
   @Get('health') health(){return {status:'UP',component:'writing-api',aiScoring:process.env.AI_RELEASE_GATE_APPROVED==='true' && process.env.AI_CHILD_PROCESSING_APPROVED==='true'?'RELEASE_GATED':'NOT_CONFIGURED'};}
 }
-@Module({imports:[PrismaModule,AuthModule,AdminModule,SubmissionModule,AcademicModule,AssessmentModule,HumanReviewModule],controllers:[HealthController]})
+@Module({imports:[PrismaModule,AuthModule,AdminModule,SubmissionModule,AcademicModule,AssessmentModule,HumanReviewModule,AcademicViewsModule],controllers:[HealthController]})
 export class AppModule {}
