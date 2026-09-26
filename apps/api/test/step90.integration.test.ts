@@ -355,3 +355,78 @@ test('Step92 DB rejects forged report points or REPORT REBUILT without a real sn
 });
 
 test.after(async()=>{if(db)await db.$disconnect();});
+
+// Step93 family discovery uses the same current scope as individual result reads.
+import {ParentAssessmentResultController} from '../src/review/parent-result.controller.ts';
+async function familyFixture(tx:any){
+ const f=await finalized(tx);
+ const sub=await tx.submission.findUniqueOrThrow({where:{id:f.assessment.submissionId}});
+ const guardian=await tx.user.create({data:{email:`family-${randomUUID()}@example.test`,role:'PARENT',passwordHash:'SYNTHETIC'}});
+ const link=await tx.parentStudentLink.create({data:{guardianId:guardian.id,studentId:f.student.id,
+  programId:sub.programId,status:'ACTIVE',verifiedAt:new Date(),activatedAt:new Date(),approvedById:f.a.id}});
+ const controller=new ParentAssessmentResultController(tx);
+ const req={actor:actor(guardian)} as any;
+ return {...f,sub,guardian,link,controller,req};
+}
+test('Step93 parent catalog exposes only linked program results and current score revision',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await familyFixture(tx),other=await finalized(tx);
+  const first=await f.controller.list(f.req);
+  assert.deepEqual(first.assessments.map(x=>x.assessmentId),[f.assessment.id]);
+  assert.equal(first.assessments[0].totalScore,'2');
+  assert.equal(first.assessments[0].effectiveRevisionId,f.firstRevision);
+  assert.equal(first.nextCursor,null);
+  assert.equal('factorResults' in first.assessments[0],false);
+  await assert.rejects(f.controller.result(f.req,other.student.id,other.assessment.id),/Not Found/i);
+  await assert.rejects(f.controller.list({actor:actor(f.a)} as any),/Forbidden/i);
+  await assert.rejects(f.controller.list(f.req,'not-a-uuid'),/Invalid cursor/i);
+  const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
+  await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
+  await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
+  const current=(await f.controller.list(f.req)).assessments[0];
+  assert.equal(current.totalScore,'4');assert.notEqual(current.effectiveRevisionId,f.firstRevision);
+ });
+});
+test('Step93 guardian revocation, future verification and processing/enrollment loss hide list AND detail',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await familyFixture(tx);
+  const absent=async()=>{
+   assert.equal((await f.controller.list(f.req)).assessments.length,0);
+   await assert.rejects(f.controller.result(f.req,f.student.id,f.assessment.id),/Not Found/i);
+  };
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{verifiedAt:new Date(Date.now()+86400000)}});await absent();
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{verifiedAt:new Date(),revokedAt:new Date()}});await absent();
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{revokedAt:null}});
+  await tx.processingAuthority.updateMany({where:{studentId:f.student.id},data:{endedAt:new Date()}});await absent();
+  await tx.processingAuthority.updateMany({where:{studentId:f.student.id},data:{endedAt:null}});
+  await tx.enrollment.updateMany({where:{studentId:f.student.id},data:{endedAt:new Date()}});await absent();
+  await tx.enrollment.updateMany({where:{studentId:f.student.id},data:{endedAt:null}});
+  await tx.user.update({where:{id:f.guardian.id},data:{status:'DISABLED'}});await absent();
+ });
+});
+test('Step93 keyset pages neither duplicate authority matches nor leak unlinked program or pending scores',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await familyFixture(tx);
+  // A second qualifying authority must not duplicate a row in a page.
+  await tx.processingAuthority.create({data:{studentId:f.student.id,programId:f.sub.programId,
+   purpose:'CORE_ASSESSMENT',legalBasis:'SYNTHETIC_ONLY',policyVersion:'step93',approvedById:f.a.id}});
+  for(let i=0;i<21;i++){
+   const {id,createdAt,...copy}=f.sub;
+   const sub=await tx.submission.create({data:{...copy,clientRequestId:randomUUID()}});
+   await tx.assessment.create({data:{submissionId:sub.id}});
+  }
+  const first=await f.controller.list(f.req);
+  assert.equal(first.assessments.length,20);assert.ok(first.nextCursor);
+  const second=await f.controller.list(f.req,first.nextCursor!);
+  assert.equal(second.assessments.length,2);assert.equal(second.nextCursor,null);
+  const all=[...first.assessments,...second.assessments];
+  assert.equal(new Set(all.map(x=>x.assessmentId)).size,22);
+  for(const row of all.filter(x=>x.status!=='FINALIZED')){
+   assert.equal(row.totalScore,null);assert.equal(row.effectiveRevisionId,null);
+  }
+  // Existing child with another active program does not imply a link to that program.
+  const program=await tx.academicProgram.create({data:{code:randomUUID(),name:'Other synthetic program'}});
+  await tx.parentStudentLink.update({where:{id:f.link.id},data:{programId:program.id}});
+  assert.equal((await f.controller.list(f.req)).assessments.length,0);
+ });
+});

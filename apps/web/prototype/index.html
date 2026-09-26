@@ -15,7 +15,7 @@
 <label>Email address<input id="email" type="email" autocomplete="username" required maxlength="254"></label>
 <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
 <button type="submit" id="loginButton">Sign in securely <span aria-hidden="true">→</span></button>
-</form><small>Tokens are kept only in memory, not localStorage. Use a controlled local development environment.</small></section>
+</form><small>Use your synthetic development account. Your family’s records are visible only with current access.</small></section>
 <section id="workspace" hidden aria-labelledby="workspace-title">
 <div class="workspace-top"><div><span class="eyebrow" id="roleLabel"></span><h2 id="workspace-title">Your workspace</h2></div><button id="logout" class="ghost" type="button">Sign out</button></div>
 <section id="student" class="panel" hidden><div class="panel-head"><div><span class="eyebrow">STUDENT</span><h3>My writing submissions</h3></div><button type="button" id="refreshStudent" class="secondary">Refresh</button></div>
@@ -35,9 +35,9 @@
 <div id="studentResult" class="detail" aria-live="polite"></div></section>
 <section id="teacher" class="panel" hidden><span class="eyebrow">ACADEMIC WORKSPACE</span><h3>Current cohort assessments</h3><p>Enter an assigned batch ID. The server checks current teaching or program scope for every request.</p>
 <form id="cohortForm" class="inline"><label>Assigned batch UUID<input id="batchId" required placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" pattern="[a-fA-F0-9-]{36}"></label><button type="submit">View cohort</button></form>
-<div id="cohort" class="stack"></div></section>
+<div id="cohort" class="stack"></div><button id="cohortNext" type="button" class="secondary" hidden>Next page</button></section>
 <section id="parent" class="panel" hidden><span class="eyebrow">PARENT</span><h3>Protected family access</h3>
-<p>Only currently verified links permit access. The full family dashboard is not implemented in this preview; it will use the existing server-scoped guardian endpoints. No child information is cached here.</p></section>
+<p>View assessments available through your verified family links. Access is checked whenever you open a result or download a report.</p><button id="refreshParent" type="button" class="secondary">Refresh family assessments</button><div id="parentAssessments" class="stack"></div><button id="parentNext" type="button" class="secondary" hidden>Next page</button><div id="parentResult" class="detail" aria-live="polite"></div></section>
 <section id="admin" class="panel" hidden><h3>Administrative access</h3><p>Platform administration does not automatically grant access to private child assessment records.</p></section>
 </section></main><footer>Writing Studio · Development preview · Server-authoritative assessment results only</footer>
 <script type="module" src="./app.js"></script></body></html>
