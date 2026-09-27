@@ -1,6 +1,8 @@
 # Step 97 — Student dashboard
 
-**Status:** implementation on `step97-student-dashboard`; local checks pass. GitHub full-stack desktop/mobile browser CI is required before merge. Development fixtures use synthetic accounts and data only.
+**Status:** PR #19 merged; development-only implementation verified with synthetic accounts and data.
+
+PR #19 merged to `main` as `b262e070e207db22da86f3e5e9581ea1b26f4aaa`. PR-head CI [36328104902](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328104902) and post-merge main CI [36328284717](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328284717) both passed all three jobs. Final PR-head browser coverage exercised synthetic-upstream and real NestJS/PostgreSQL flows on desktop and mobile.
 
 ## Scope delivered
 
@@ -23,7 +25,7 @@ Passed locally:
 - `npx tsc --noEmit -p apps/api/tsconfig.browser.json`
 - `git diff --check`
 
-The local Playwright suite could not launch because this workspace has no installed Chromium headless executable. The synthetic desktop/mobile browser tests are updated, and the full-stack tests assert the actual NestJS/PostgreSQL response, current HUMAN revision summary, no-store header, student-only row scope and dashboard rendering. Merge remains gated on successful GitHub CI for the exact PR head.
+The local Playwright suite could not launch because this workspace has no installed Chromium headless executable, and the Python tests could not run because `pytest` is absent. The final GitHub CI run passed the desktop/mobile synthetic-upstream browser suite, the full-stack tests through Next.js/NestJS/PostgreSQL, and the mocked Python AI boundary suite. The full-stack tests assert pending scores are absent, the current HUMAN revision summary is accurate, the response is no-store, rows are student-scoped, and the dashboard fits mobile width.
 
 ## Limits and next task
 
