@@ -5,12 +5,16 @@ async function login(page:Page,role='student'){
  await page.getByRole('button',{name:'Sign in',exact:true}).click();await expect(page.getByRole('button',{name:'Sign out',exact:true})).toBeVisible();
 }
 test('student signs in, submits original writing, sees pending and approved results, then signs out',async({page,context},info)=>{
- await login(page);await expect(page.getByText('Your writing journey',{exact:true})).toBeVisible();
+ await login(page);await expect(page.getByRole('heading',{name:'Your recent writing'})).toBeVisible();
+ await expect(page.getByText('Latest approved result',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.cookie)).not.toMatch(/writing_access|writing_refresh/);
  const cookies=await context.cookies();expect(cookies.filter(c=>c.name.startsWith('writing_')).every(c=>c.httpOnly&&c.sameSite==='Strict')).toBeTruthy();
- await page.getByRole('button',{name:'View result'}).last().click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
- await page.getByRole('button',{name:'View result'}).first().click();await expect(page.getByText('Synthetic approved fixture:',{exact:false}).first()).toBeVisible();
+ await page.getByRole('button',{name:'View status'}).click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
+ await page.getByRole('button',{name:'Close result'}).click();
+ await page.getByRole('button',{name:'Read feedback'}).click();await expect(page.getByText('Synthetic approved fixture:',{exact:false}).first()).toBeVisible();
  await page.screenshot({path:info.outputPath('student-result.png'),fullPage:true});
+ await page.getByRole('button',{name:'Assessments',exact:true}).click();
+ await page.getByRole('button',{name:'View result'}).first().click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
  await page.getByRole('button',{name:'New writing',exact:true}).click();await expect(page.getByRole('heading',{name:'Your approved result'})).toHaveCount(0);await page.getByLabel('Choose your topic').selectOption({index:1});
  await expect(page.getByText('Your favourite book',{exact:true})).toBeVisible();await page.getByLabel('Your writing',{exact:true}).fill('I enjoy reading. Books help me discover new places and ideas.');
  await page.screenshot({path:info.outputPath('writing-editor.png'),fullPage:true});
