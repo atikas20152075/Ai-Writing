@@ -39,6 +39,9 @@ test('real submission, independent human approval, linked-family privacy and liv
   await page.getByRole('button',{name:'Submit writing'}).click();
   const response=await submitted;expect(response.status()).toBe(201);
   const record=await response.json();expect(record.status).toBe('AWAITING_UNDERSTANDING');
+  const pendingMine=await get(page,'submissions/mine');
+  expect(pendingMine.status).toBe(200);expect(pendingMine.body).toHaveLength(1);
+  expect(pendingMine.body[0].assessment).toMatchObject({status:'AWAITING_UNDERSTANDING',effectiveResult:null});
   expect(fixture('inspect',{userId:f.studentUserId,assessmentId:record.assessmentId})).toEqual({
     text:writing,status:'AWAITING_UNDERSTANDING',submissionCount:1,acceptedEvents:1});
   await page.getByRole('button',{name:'View result'}).click();
@@ -57,8 +60,9 @@ test('real submission, independent human approval, linked-family privacy and liv
   const cache=await page.evaluate(async()=>{const r=await fetch('/api/portal/submissions/mine',{headers:{'X-Writing-Client':'portal'}});return r.headers.get('cache-control');});
   expect(cache).toContain('no-store');
   await page.getByRole('button',{name:'Overview',exact:true}).click();
-  await expect(page.getByText('Latest approved result',{exact:true})).toBeVisible();
+  await expect(page.getByText('LATEST APPROVED RESULT',{exact:true})).toBeVisible();
   await expect(page.locator('.student-approved-score')).toContainText('2 / 4');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
   await page.getByRole('button',{name:'Close result'}).click();
   await page.screenshot({path:info.outputPath('real-student-dashboard.png'),fullPage:true});
   const studentCookies=await context.cookies();

@@ -6,7 +6,7 @@ async function login(page:Page,role='student'){
 }
 test('student signs in, submits original writing, sees pending and approved results, then signs out',async({page,context},info)=>{
  await login(page);await expect(page.getByRole('heading',{name:'Your recent writing'})).toBeVisible();
- await expect(page.getByText('Latest approved result',{exact:true})).toBeVisible();
+ await expect(page.getByText('LATEST APPROVED RESULT',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.cookie)).not.toMatch(/writing_access|writing_refresh/);
  const cookies=await context.cookies();expect(cookies.filter(c=>c.name.startsWith('writing_')).every(c=>c.httpOnly&&c.sameSite==='Strict')).toBeTruthy();
  await page.getByRole('button',{name:'View status'}).click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
