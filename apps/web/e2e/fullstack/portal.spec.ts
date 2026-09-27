@@ -180,3 +180,31 @@ test('current assigned teacher can inspect a pending review case; unassigned bat
   expect((await page.evaluate(async path=>{const r=await fetch('/api/portal/'+path,{headers:{'X-Writing-Client':'portal'}});return r.status;},`review-cases?batchId=${f.batchId}`))).toBe(403);
   expect((await page.evaluate(async id=>{const r=await fetch('/api/portal/review-cases/'+id,{headers:{'X-Writing-Client':'portal'}});return r.status;},opened.caseId))).toBe(200);
 });
+
+test('authorized reviewers see the locked writing and factor evidence; correction proposal awaits an independent decision',async({page})=>{
+  const f=fixture('create');await login(page,f.studentEmail,f.password);
+  await page.getByRole('button',{name:'New writing',exact:true}).click();
+  await page.getByLabel('Choose your topic').selectOption({label:'Books and new ideas · ENGLISH · Linked learner cohort'});
+  await page.getByLabel('Your writing',{exact:true}).fill('I like books. Reading helps me discover new ideas.');
+  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/typed')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit writing'}).click();const record=await (await submitted).json();
+  fixture('finalize',{userId:f.studentUserId,assessmentId:record.assessmentId,teacherId:f.teacherId,reviewerId:f.reviewerId});
+  const opened=fixture('propose-review',{userId:f.studentUserId,assessmentId:record.assessmentId,teacherId:f.teacherId});
+  await logout(page);await login(page,f.teacherEmail,f.password);
+  await page.getByRole('button',{name:'Review case'}).click();
+  await expect(page.getByText('I like books. Reading helps me discover new ideas.',{exact:true})).toBeVisible();
+  await expect(page.getByText('Synthetic human-reviewed browser evidence: the writing mentions books.',{exact:false})).toBeVisible();
+  await expect(page.getByText('Independent proposal · 2 / 4')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Approve proposal'})).toBeDisabled();
+  await logout(page);await login(page,f.reviewerEmail,f.password);
+  await page.getByRole('button',{name:'Review case'}).click();
+  await page.getByLabel('Decision reason (20–2,000 characters)').fill('Independent reviewer confirms the factor evidence and rubric selection.');
+  await page.getByRole('button',{name:'Approve proposal'}).click();
+  await expect(page.getByRole('status')).toContainText('The review decision was recorded.');
+  const result=await get(page,`academic/cohorts/${f.batchId}/assessments`);
+  expect(result.status).toBe(200);
+  const row=result.body.assessments.find((x:{assessmentId:string})=>x.assessmentId===record.assessmentId);
+  expect(row.status).toBe('FINALIZED');expect(row.reviewPending).toBe(false);
+  expect(fixture('inspect',{userId:f.studentUserId,assessmentId:record.assessmentId}).status).toBe('FINALIZED');
+  expect(opened.caseId).toMatch(/^[0-9a-f-]{36}$/i);
+});

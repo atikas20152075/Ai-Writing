@@ -121,6 +121,15 @@ async function action(command:string,input:Record<string,string>){
     await db.assessment.update({where:{id:assessment.id},data:{status:'HUMAN_REVIEW'}});
     return new HumanReviewService(db).open(actor(teacher),assessment.id,reason);
   }
+  if(command==='propose-review'){
+    const teacher=await syntheticUser(input.teacherId);
+    const reviews=new HumanReviewService(db);
+    const review=await reviews.open(actor(teacher),assessment.id,reason);
+    await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c2',proposedScore:'2',
+      rationale:'Synthetic proposal supported by the original verified writing evidence.',
+      evidence:[{startOffset:7,endOffset:12,exactQuote:'books',claim:'The verified text mentions books.'}]}],reason);
+    return {caseId:review.caseId};
+  }
   if(command==='assert-db-guards'){
     const link=assessment.submission;
     assert.ok(link.rewriteOfAssessmentId&&link.rewriteOfRevisionId&&link.correctionNote);
