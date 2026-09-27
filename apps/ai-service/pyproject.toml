@@ -3,6 +3,6 @@ name = "writing-ai-service"
 version = "0.2.0"
 description = "Gated Responses API integration with independent verifier"
 requires-python = ">=3.11"
-dependencies = ["fastapi>=0.110,<1", "pydantic>=2,<3", "uvicorn>=0.27,<1", "httpx>=0.27,<1", "regex>=2024.5,<2028"]
+dependencies = ["fastapi>=0.110,<1", "pydantic>=2,<3", "uvicorn>=0.27,<1", "httpx>=0.27,<1", "regex>=2024.5,<2028", "reportlab>=4.4.9,<5", "uharfbuzz>=0.52,<1"]
 [project.optional-dependencies]
 test = ["pytest>=8,<10", "httpx>=0.27,<1"]

@@ -40,6 +40,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install bounded Bangla PDF shaping dependencies
+        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
+      - name: Install PDF text extraction validator
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Create CI-only ephemeral secrets
         shell: bash
         run: |
@@ -88,6 +92,7 @@ jobs:
         run: |
           python -m pip install -e 'apps/ai-service[test]'
           (cd apps/ai-service && python -m pytest -q)
+          node --experimental-strip-types --test apps/api/test/report-policy.test.ts
   web-portal:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -143,6 +148,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22.16.0'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install bounded Bangla PDF shaping dependencies
+        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
       - name: Install locked dependencies and migrate disposable browser database
         run: |
           npm ci --no-audit --no-fund

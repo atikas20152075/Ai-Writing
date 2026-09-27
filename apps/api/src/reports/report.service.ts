@@ -1,16 +1,16 @@
-/** On-demand English PDF with immutable as-of report snapshots and current-scope rechecks.
+/** On-demand bilingual PDF with immutable as-of report snapshots and current-scope rechecks.
  * No public object bucket or historically stale report download endpoints. */
 import {ConflictException,Inject,Injectable} from '@nestjs/common';
 import {Prisma} from '@prisma/client';
 import {PrismaService} from '../prisma/prisma.service.ts';
 import type {Actor} from '../auth/jwt.guard.ts';
 import {authorizedReport} from './report-access.ts';
-import {reportFromApprovedSource,reportHash,ReportPolicyError} from './report-policy.ts';
-import {renderEnglishPdf} from './english-pdf.ts';
+import {reportFromApprovedSource,reportHash,ReportPolicyError,reportFormatVersion} from './report-policy.ts';
+import {renderReportPdf} from './report-pdf.ts';
 @Injectable()
 export class ReportService{
  constructor(@Inject(PrismaService)private readonly db:PrismaService){}
- async englishPdf(actor:Actor,assessmentId:string){
+ async pdfReport(actor:Actor,assessmentId:string){
   return this.db.$transaction(async tx=>{
    const row=await authorizedReport(tx,actor,assessmentId);
    let snapshot;
@@ -26,19 +26,19 @@ export class ReportService{
    }
    // Printable bytes are generated BEFORE persisting a success record.
    let pdf:Buffer;
-   try{pdf=renderEnglishPdf(snapshot);}catch(error){
+   try{pdf=await renderReportPdf(snapshot);}catch(error){
     if(error instanceof ReportPolicyError)throw new ConflictException(error.code);
     throw error;
    }
-   const sha=reportHash(snapshot);
+   const sha=reportHash(snapshot),formatVersion=reportFormatVersion(snapshot.language);
    const existing=await tx.reportSnapshot.findUnique({where:{assessmentId_scoreRevisionId_formatVersion:{
-     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion:'english-rubric-report-v1'}}});
+     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}}});
    if(existing){
     if(existing.snapshotHash!==sha)
      throw new ConflictException('REPORT_FORMAT_VERSION_CONFLICT');
    }else{
     await tx.reportSnapshot.create({data:{assessmentId:row.assessmentId,
-      scoreRevisionId:row.scoreRevisionId,formatVersion:'english-rubric-report-v1',
+      scoreRevisionId:row.scoreRevisionId,formatVersion,
       snapshot:snapshot as unknown as Prisma.InputJsonValue,snapshotHash:sha,
       createdById:actor.userId}});
    }
@@ -58,10 +58,10 @@ export class ReportService{
     await tx.derivedProjectionInvalidation.update({where:{id:receipt.id},data:{
       status:'REBUILT',errorCode:null,processedAt:new Date()}});
    }
-   await tx.auditEvent.create({data:{actorId:actor.userId,action:'ENGLISH_PDF_REPORT_GENERATED',
+   await tx.auditEvent.create({data:{actorId:actor.userId,action:'REPORT_PDF_GENERATED',
      resourceType:'Assessment',resourceId:row.assessmentId,
-     details:{revisionId:row.scoreRevisionId,snapshotHash:sha,formatVersion:'english-rubric-report-v1'}}});
-   return {pdf,revisionId:row.scoreRevisionId,snapshotHash:sha};
+     details:{revisionId:row.scoreRevisionId,snapshotHash:sha,formatVersion,language:snapshot.language}}});
+   return {pdf,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion};
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
  }
 }

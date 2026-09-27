@@ -56,7 +56,7 @@ export class TeacherDashboardService{
         AND c.status IN ('OPEN','PROPOSED')) AS "reviewPending",
       EXISTS(SELECT 1 FROM "ReportSnapshot" rep
         WHERE rep."assessmentId"=a.id AND rep."scoreRevisionId"=a."effectiveScoreRevisionId"
-          AND rep."formatVersion"='english-rubric-report-v1') AS "reportReady"
+          AND rep."formatVersion" IN ('english-rubric-report-v1','rubric-report-v2-en','rubric-report-v2-bn')) AS "reportReady"
     FROM "Assessment" a JOIN "Submission" s ON s.id=a."submissionId"
       LEFT JOIN "AssessmentScoreRevision" r
         ON r.id=a."effectiveScoreRevisionId" AND a.status='FINALIZED'

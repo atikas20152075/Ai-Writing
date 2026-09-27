@@ -4,14 +4,17 @@ The merged Step92 milestone is **synthetic-tested development-only**. This check
 
 ## Verified development baseline
 - [x] Currently assigned teacher / explicitly scoped academic administrator read endpoint; no SUPER_ADMIN academic-data bypass.
-- [x] On-demand English ASCII-only, revision-pinned printable PDF from approved immutable factor results.
+- [x] On-demand revision-pinned printable PDF from approved immutable factor results; Step103 adds English/Bangla v2 formats while preserving legacy v1 snapshots.
 - [x] Current-authorization check inside the report transaction and SQL-guarded immutable snapshot/hash.
 - [x] Existing disposable-PostgreSQL synthetic CI for permissions, revocation, revision supersession and PDF integrity.
 - [x] PR #10 merged: pseudonymous actor-wide cross-replica PDF export rate limit and pure/synthetic HTTP tests; CI [run 36255284609](https://github.com/atikas20152075/Ai-Writing/actions/runs/36255284609) passed. Production stress/security review remains pending.
 
 ## Remaining production gates — BLOCK RELEASE until independently evidenced
-- [ ] Select legally redistributable Bangla-capable fonts, establish font source/version/license, embed/subset and render mixed Bangla-English scripts; visually QA shaping, line wrapping and evidence quotes with expert-reviewed fixtures.
-- [ ] Replace minimal PDF with accessible document structure (tagged PDF, reading order, selectable copy, screen-reader review), multilingual layouts and measured performance/memory limits.
+- [x] Select Noto Sans Bengali 0.4.4 (font files under OFL-1.1; package also MIT), bundle Regular/Bold, and generate multilingual PDFs with embedded subset fonts. Synthetic Bangla mixed-script extraction, multi-page rendering and visual QA are recorded in Step103.
+- [ ] Independently review Bangla shaping, line wrapping and evidence quotes with expert-adjudicated fixtures; this code change does not establish reading comprehension or scoring quality.
+- [x] Add document language, selectable copy and bounded in-memory output for multilingual layouts.
+- [ ] Add a correctly validated PDF structure tree and complete screen-reader/accessibility review; output currently sets a marked-content flag but is not a tagged PDF or PDF/UA conformance claim.
+- [ ] Measure production performance/memory limits.
 - [ ] Provide private report artifact storage (encrypted at rest, key rotation, region/vendor approval), owner-scoped metadata, malware/content-type controls and short-lived delivery only after *fresh* educational authority verification.
 - [ ] Define immutable revision-linked report artifact versioning, supersession, revocation limitations for already downloaded reports, and lifecycle retention/deletion/reconciliation that do not erase mandated immutable academic audit evidence.
 - [ ] Run penetration testing, authorization IDOR/revocation races, high-concurrency load testing and disaster-recovery exercises with published acceptance thresholds.
