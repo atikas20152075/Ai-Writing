@@ -5,6 +5,7 @@ export function requireDisposableBrowserDatabase(env = process.env) {
   const db = new URL(env.DATABASE_URL ?? 'invalid:');
   if (!['postgres:', 'postgresql:'].includes(db.protocol) ||
       !['127.0.0.1', 'localhost', '[::1]'].includes(db.hostname) ||
-      db.pathname !== '/writing_browser_test')
+      db.pathname !== '/writing_browser_test' || db.hash ||
+      [...db.searchParams].some(([key,value])=>key!=='schema'||value!=='public'))
     throw new Error('Full-stack browser fixtures require a disposable loopback writing_browser_test database');
 }

@@ -36,4 +36,6 @@ The harness owns ports 3021 (NestJS) and 3200 (Next.js). Existing servers are no
 
 Only a completed successful PR-head CI run is passing browser evidence. The job retains synthetic screenshots/failure traces for seven days. Local static checks are not a substitute for the PostgreSQL browser job.
 
+Initial verified run: [36291381408](https://github.com/atikas20152075/Ai-Writing/actions/runs/36291381408), commit `d3ae48d3057315d84d6ebb1d1827b1d1f9dc5e29`, passed all three jobs on 2026-09-27. The new full-stack job passed all four desktop/mobile tests against real PostgreSQL in 27.4 seconds; the existing 12 browser scenarios and backend integrity job also passed. Subsequent PR-head changes add explicit canonical-score assertions and reject database query-parameter overrides; consult the final PR #15 checks before merging.
+
 After this gate passes, continue with current-revision PFCR learning views and the linked rewrite workflow. Bengali accessible font-embedded PDF, private report storage/lifecycle, handwriting/OCR, real AI academic validation, and production privacy/security/operational gates remain open.

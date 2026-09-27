@@ -61,6 +61,8 @@ test('real submission, independent human approval, linked-family privacy and liv
   const catalog=await get(page,'parents/me/children/assessments');
   expect(catalog.status).toBe(200);expect(catalog.body.assessments.map((r:{assessmentId:string})=>r.assessmentId)).toEqual([record.assessmentId]);
   const detail=`parents/me/children/${f.studentId}/assessments/${record.assessmentId}/result`;
+  const ownResult=await get(page,detail);expect(ownResult.status).toBe(200);
+  expect(ownResult.body.result).toMatchObject({totalScore:'2',totalMarks:'4',source:'HUMAN',revisionNo:1});
   expect((await get(page,`parents/me/children/${f.otherStudentId}/assessments/${f.otherAssessmentId}/result`)).status).toBe(404);
   expect((await get(page,`parents/me/children/${f.otherStudentId}/assessments/${record.assessmentId}/result`)).status).toBe(404);
   await page.getByRole('button',{name:'View result'}).click();

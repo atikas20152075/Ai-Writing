@@ -8,6 +8,8 @@ test('browser fixture cannot target production, an unnamed DB, or an unacknowled
   for(const patch of [{NODE_ENV:'production'},{WRITING_FULLSTACK_ACK:undefined},{DATABASE_URL:undefined},
     {DATABASE_URL:'postgresql://synthetic:synthetic@production.example/writing_browser_test'},
     {DATABASE_URL:'postgresql://synthetic:synthetic@localhost/real_data'},
+    {DATABASE_URL:'postgresql://synthetic:synthetic@localhost/writing_browser_test?host=production.example'},
+    {DATABASE_URL:'postgresql://synthetic:synthetic@localhost/writing_browser_test?schema=real_data'},
     {DATABASE_URL:'https://localhost/writing_browser_test'}])
     assert.throws(()=>requireDisposableBrowserDatabase({...valid,...patch}));
 });

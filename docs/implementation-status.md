@@ -62,3 +62,6 @@ PRs #11–12 added a local static student/teacher preview and scoped topic catal
 ## Step93 — Next.js portal continuation
 
 The [Next.js implementation](step93-nextjs-portal.md) replaces the web placeholder with role-specific student/parent/teacher workspaces and a server-side cookie authentication gateway. Prior static-portal limitations above are historical. Browser tests are isolated synthetic tests; backend PostgreSQL/HTTP validation remains independent. Bilingual report/private artifact lifecycle, live AI and production release gates remain open.
+# Step93 full-stack browser continuation — 2026-09-27
+
+PR #15 adds desktop/mobile browser checks through the actual Next.js gateway, NestJS and disposable PostgreSQL. Initial run 36291381408 passed all three CI jobs, including four new full-stack scenarios and the existing twelve synthetic-upstream browser scenarios. See `docs/step93-fullstack-browser.md` for tested privacy/session boundaries, fixture limitations and final-head verification requirements. Next development checkpoint: current-revision PFCR learning views and linked rewrites. Production deployment and real AI grading remain off.
