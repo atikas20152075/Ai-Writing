@@ -73,4 +73,4 @@ Students can now open approved learning material, see revision-pinned rubric fee
 
 ## Step 97 — Student dashboard
 
-The student Overview summarizes up to 50 own recent attempts and the latest current approved result. Pending assessments expose no score, and the page does not combine unlike rubrics. Full-stack CI is required before merge; local Playwright is blocked by the missing Chromium binary. See [Step97 scope and limits](docs/step97-student-dashboard.md). Next task: Step 98 — Analytics Engine.
+The student Overview summarizes up to 50 own recent attempts and the latest current approved result. Pending assessments expose no score, and the page does not combine unlike rubrics. PR #19 is merged; PR-head and post-merge CI runs [36328104902](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328104902) and [36328284717](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328284717) passed all three jobs. See [Step97 scope and limits](docs/step97-student-dashboard.md). Next task: Step 98 — Analytics Engine.
