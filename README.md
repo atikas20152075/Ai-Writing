@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 99 (API response hardening, development-only). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 100 production readiness review: **NO-GO for production or real learner data**. This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
@@ -8,6 +8,7 @@
 - [Step 94 PFCR linked rewrite workflow](docs/step94-pfcr-linked-rewrites.md)
 - [Step 95 authorized review queue](docs/step95-review-queue.md)
 - [Step 99 API response hardening](docs/step99-api-response-hardening.md)
+- [Step 100 production readiness decision](docs/step100-production-readiness.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
@@ -79,6 +80,10 @@ The teacher and scoped academic-administrator API reports descriptive cohort agg
 ## Step 99 — API response hardening
 
 The API now sets private no-store, anti-sniffing, anti-framing, referrer, and permissions headers on every response and disables Express `X-Powered-By`. The synthetic HTTP smoke suite checks health and authenticated profile headers. PR #23 is merged, and exact-head CI [36336277257](https://github.com/atikas20152075/Ai-Writing/actions/runs/36336277257) passed all three jobs. See [Step99 scope and limits](docs/step99-api-response-hardening.md). This does not establish production readiness. Next task: Step 100 — Production Release gates and readiness review.
+
+## Step 100 — Production readiness decision
+
+The evidence review is **NO-GO for production deployment and real learner data**. Synthetic CI is green, but dependency audit, legal/vendor and expert scoring approvals, accessible/private multilingual reports, independent security/performance assurance, and production operations/resilience evidence remain open. See [Step100 decision and gates](docs/step100-production-readiness.md). No release or deployment was authorized.
 
 ## Step 97 — Student dashboard
 
