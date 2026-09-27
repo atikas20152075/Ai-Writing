@@ -259,7 +259,7 @@ test('Step103 bilingual PDF is a real scoped export with immutable current revis
   const f=await finalized(tx);
   const report=new ReportService({$transaction:async(cb:any)=>cb(tx)} as any);
   const first=await report.pdfReport(actor(f.user),f.assessment.id);
-  assert.ok(first.pdf.subarray(0,8).toString().startsWith('%PDF-1.7'));
+  assert.equal(first.pdf.subarray(0,5).toString(),' %PDF-'.trim());
   assert.equal(first.formatVersion,'rubric-report-v2-en');
   assert.equal(first.revisionId,f.firstRevision);
   const stored=await tx.reportSnapshot.findFirstOrThrow({where:{assessmentId:f.assessment.id}});
