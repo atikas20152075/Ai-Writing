@@ -17,7 +17,7 @@ const db=new PrismaService();
 const admin=new AdminService(db);
 const actor=(user:Pick<User,'id'|'role'>)=>({userId:user.id,role:user.role,sessionId:randomUUID()});
 const reason='Synthetic browser fixture review; not an academic quality benchmark.';
-async function create(){
+async function create(language:'ENGLISH'|'BANGLA'='ENGLISH'){
   const suffix=randomUUID();
   const password='SYNTHETIC_'+randomUUID();
   const passwordHash=await hash(password);
@@ -45,11 +45,13 @@ async function create(){
     verificationReference:'SYNTHETIC_BROWSER_FIXTURE_NOT_REAL_VERIFICATION'});
   const assignment=await admin.assignTeacher(rootActor,{teacherId:teacher.id,batchId:batch.id});
   await db.academicAdminProgram.create({data:{userId:reviewer.id,programId:program.id}});
-  const topic=await admin.publishTopic(rootActor,{programId:program.id,writingType:'PARAGRAPH',language:'ENGLISH',
-    title:'Books and new ideas',instructions:'Write about books in your own words.',clues:['books','ideas']});
-  const otherTopic=await admin.publishTopic(rootActor,{programId:program.id,writingType:'PARAGRAPH',language:'ENGLISH',
+  const topic=await admin.publishTopic(rootActor,{programId:program.id,writingType:'PARAGRAPH',language,
+    title:language==='BANGLA'?'বাংলা বই ও নতুন ধারণা':'Books and new ideas',
+    instructions:language==='BANGLA'?'নিজের ভাষায় বই সম্পর্কে লিখুন।':'Write about books in your own words.',
+    clues:language==='BANGLA'?['বই','ধারণা']:['books','ideas']});
+  const otherTopic=await admin.publishTopic(rootActor,{programId:program.id,writingType:'PARAGRAPH',language,
     title:'Unlinked child private topic',instructions:'Write about a garden.',clues:['garden']});
-  const rubric=await admin.publishRubric(rootActor,{programId:program.id,writingType:'PARAGRAPH',language:'ENGLISH',
+  const rubric=await admin.publishRubric(rootActor,{programId:program.id,writingType:'PARAGRAPH',language,
     version:1,scoreStep:'1',totalMarks:'4',factors:[{id:'content',name:'Content',maxScore:'4',criteria:[
       {id:'c0',score:'0',description:'Absent'}, {id:'c2',score:'2',description:'Partial'},
       {id:'c4',score:'4',description:'Clear supported ideas'}]}]});
@@ -59,7 +61,7 @@ async function create(){
   return {password,studentEmail:studentUser.email,parentEmail:parent.email,teacherEmail:teacher.email,reviewerEmail:reviewer.email,
     studentUserId:studentUser.id,studentId:student.id,parentId:parent.id,teacherId:teacher.id,reviewerId:reviewer.id,
     rootId:root.id,linkId:link.id,assignmentId:assignment.id,batchId:batch.id,otherBatchId:otherBatch.id,
-    topicId:topic.id,otherStudentId:otherStudent.id,otherAssessmentId:other.assessmentId};
+    topicId:topic.id,language,otherStudentId:otherStudent.id,otherAssessmentId:other.assessmentId};
 }
 async function syntheticUser(id:string){
   const user=await db.user.findUniqueOrThrow({where:{id}});
@@ -67,7 +69,10 @@ async function syntheticUser(id:string){
   return user;
 }
 async function action(command:string,input:Record<string,string>){
-  if(command==='create')return create();
+  if(command==='create'){
+    if(input.language!==undefined&&input.language!=='ENGLISH'&&input.language!=='BANGLA')throw new Error('Unsupported synthetic fixture language');
+    return create(input.language==='BANGLA'?'BANGLA':'ENGLISH');
+  }
   const user=await syntheticUser(input.userId);
   if(command==='revoke-session'){
     await db.authSession.updateMany({where:{userId:user.id,revokedAt:null},data:{revokedAt:new Date()}});
@@ -147,16 +152,26 @@ async function action(command:string,input:Record<string,string>){
   }
   if(command==='finalize'){
     const teacher=await syntheticUser(input.teacherId),reviewer=await syntheticUser(input.reviewerId);
+    const verified=assessment.submission.verifiedText;
+    assert.ok(verified?.content,'Synthetic fixture must have verified writing');
+    const text=verified.content;
+    const quote=verified.language==='BANGLA'?'বই':'books';
+    const quoteIndex=text.indexOf(quote);assert.notEqual(quoteIndex,-1,'Evidence quote must occur in verified writing');
+    const startOffset=Array.from(text.slice(0,quoteIndex)).length;
+    const endOffset=startOffset+Array.from(quote).length;
+    const rationale=verified.language==='BANGLA'
+      ?'Synthetic human-reviewed browser evidence: লেখায় বইয়ের উল্লেখ আছে।'
+      :'Synthetic human-reviewed browser evidence: the writing mentions books.';
     await new AssessmentPersistenceService(db).publishHumanUnderstanding({assessmentId:assessment.id,reviewerId:teacher.id,
-      observations:[{category:'IDEA',finding:'Synthetic observation about books.',evidence:{startOffset:7,endOffset:12,
-        exactQuote:'books',claim:'The writing mentions books.'}}]});
+      observations:[{category:'IDEA',finding:'Synthetic observation about the topic.',evidence:{startOffset,endOffset,
+        exactQuote:quote,claim:'The verified writing mentions the topic.'}}]});
     // Simulate arrival at the human-review queue, without invoking a live AI worker.
     await db.assessment.update({where:{id:assessment.id},data:{status:'HUMAN_REVIEW'}});
     const reviews=new HumanReviewService(db);
     const review=await reviews.open(actor(teacher),assessment.id,reason);
     await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c2',proposedScore:'2',
-      rationale:'Synthetic human-reviewed browser evidence: the writing mentions books.',
-      evidence:[{startOffset:7,endOffset:12,exactQuote:'books',claim:'The writing mentions books.'}]}],reason);
+      rationale,
+      evidence:[{startOffset,endOffset,exactQuote:quote,claim:'The verified writing mentions the topic.'}]}],reason);
     await reviews.decide(actor(reviewer),review.caseId,'APPROVE',reason);
     return {finalized:true};
   }

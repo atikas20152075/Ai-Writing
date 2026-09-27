@@ -109,6 +109,32 @@ test('real submission, independent human approval, linked-family privacy and liv
   await expect(page.getByLabel('Choose a cohort').locator('option')).toHaveCount(1);
 });
 
+test('Bangla report language reaches the scoped browser download',async({page})=>{
+  const f=fixture('create',{language:'BANGLA'});
+  await login(page,f.studentEmail,f.password);
+  await page.getByRole('button',{name:'New writing',exact:true}).click();
+  await page.getByLabel('Choose your topic').selectOption({label:'বাংলা বই ও নতুন ধারণা · BANGLA · Linked learner cohort'});
+  const writing='আমি বই পড়তে ভালোবাসি। বই আমাকে নতুন ধারণা জানতে সাহায্য করে।';
+  await page.getByLabel('Your writing',{exact:true}).fill(writing);
+  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/typed')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit writing'}).click();
+  const response=await submitted;expect(response.status()).toBe(201);
+  const record=await response.json();expect(record.status).toBe('AWAITING_UNDERSTANDING');
+  fixture('finalize',{userId:f.studentUserId,assessmentId:record.assessmentId,teacherId:f.teacherId,reviewerId:f.reviewerId});
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await page.getByRole('button',{name:'View result'}).click();
+  await expect(page.getByText('Revision 1 · Human-reviewed')).toBeVisible();
+  const report=await page.evaluate(async id=>{
+    const r=await fetch(`/api/portal/reports/assessments/${id}/pdf`,{headers:{'X-Writing-Client':'portal'}});
+    const bytes=new Uint8Array(await r.arrayBuffer());
+    return {status:r.status,language:r.headers.get('content-language'),filename:r.headers.get('content-disposition'),signature:new TextDecoder().decode(bytes.slice(0,5))};
+  },record.assessmentId);
+  expect(report).toMatchObject({status:200,language:'bn-BD',filename:`attachment; filename="writing-report-bn-${record.assessmentId.slice(0,8)}.pdf"`,signature:'%PDF-'});
+  const downloadEvent=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Download report'}).click();
+  expect((await downloadEvent).suggestedFilename()).toBe(`writing-report-bn-${record.assessmentId.slice(0,8)}.pdf`);
+});
+
 test('real refresh rotation restores a browser session and DB revocation clears both cookies',async({page,context})=>{
   const f=fixture('create');await login(page,f.studentEmail,f.password);
   const before=(await context.cookies()).find(c=>c.name==='writing_refresh')!;
