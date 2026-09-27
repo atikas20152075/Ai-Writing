@@ -431,3 +431,20 @@ test('Step93 keyset pages exclude historical authority duplicates, unlinked prog
   assert.equal((await f.controller.list(f.req)).assessments.length,0);
  });
 });
+
+test('Step93 cohort discovery returns only active assigned batches and rejects global admin',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx),other=await finalized(tx);
+  const sub=await tx.submission.findUniqueOrThrow({where:{id:f.assessment.submissionId}});
+  const teacher=await tx.user.create({data:{email:`discovery-${randomUUID()}@example.test`,role:'TEACHER',passwordHash:'SYNTHETIC'}});
+  const assignment=await tx.teacherBatch.create({data:{teacherId:teacher.id,batchId:sub.batchId}});
+  const dashboard=new TeacherDashboardService(tx);
+  assert.deepEqual((await dashboard.mine(actor(teacher))).cohorts.map(x=>x.id),[sub.batchId]);
+  assert.deepEqual((await dashboard.mine(actor(f.a))).cohorts.map(x=>x.id),[sub.batchId]);
+  await assert.rejects(dashboard.mine({...actor(f.a),role:'SUPER_ADMIN'}),/Forbidden/i);
+  await tx.teacherBatch.update({where:{id:assignment.id},data:{endedAt:new Date()}});
+  assert.deepEqual((await dashboard.mine(actor(teacher))).cohorts,[]);
+  await tx.academicAdminProgram.updateMany({where:{userId:f.a.id},data:{endedAt:new Date()}});
+  assert.deepEqual((await dashboard.mine(actor(f.a))).cohorts,[]);
+ });
+});

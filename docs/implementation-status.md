@@ -58,3 +58,7 @@ Implements authenticated teacher/batch and program-admin read access without a g
 ## Step93 continuation — current portal scope
 
 PRs #11–12 added a local static student/teacher preview and scoped topic catalog/typed editor. The follow-up [family portal and session-safety increment](step93-family-portal.md) adds verified-family discovery/detail, parent/teacher pagination, and late-response fencing. The web workspace is still **not Next.js**. Step92 production closeout, browser E2E, bilingual reports and real-model/child-data approvals remain open. See the linked evidence for exact checks; historical sections above remain historical snapshots.
+
+## Step93 — Next.js portal continuation
+
+The [Next.js implementation](step93-nextjs-portal.md) replaces the web placeholder with role-specific student/parent/teacher workspaces and a server-side cookie authentication gateway. Prior static-portal limitations above are historical. Browser tests are isolated synthetic tests; backend PostgreSQL/HTTP validation remains independent. Bilingual report/private artifact lifecycle, live AI and production release gates remain open.
