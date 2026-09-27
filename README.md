@@ -1,12 +1,13 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 95 (authorized human-review queue and case inspection). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 99 (API response hardening, development-only). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
 - [Current Next.js portal, setup and authentication boundary](docs/step93-nextjs-portal.md)
 - [Step 94 PFCR linked rewrite workflow](docs/step94-pfcr-linked-rewrites.md)
 - [Step 95 authorized review queue](docs/step95-review-queue.md)
+- [Step 99 API response hardening](docs/step99-api-response-hardening.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
@@ -74,6 +75,10 @@ Students can now open approved learning material, see revision-pinned rubric fee
 ## Step 98 — Cohort analytics
 
 The teacher and scoped academic-administrator API reports descriptive cohort aggregates from current authorized enrollment and current effective finalized score revisions. Each immutable rubric version is kept in its own group; repeated assessments count separately, and groups contain no learner or assessment identifiers. The endpoint is read-only and private/no-store. PR #21 is merged, and exact-head CI [36329851220](https://github.com/atikas20152075/Ai-Writing/actions/runs/36329851220) passed all three jobs. See [Step98 scope and limits](docs/step98-cohort-analytics.md). Next task: Step 99 — Production Hardening.
+
+## Step 99 — API response hardening
+
+The API now sets private no-store, anti-sniffing, anti-framing, referrer, and permissions headers on every response and disables Express `X-Powered-By`. The synthetic HTTP smoke suite checks health and authenticated profile headers. See [Step99 scope and limits](docs/step99-api-response-hardening.md). This does not establish production readiness. Next task: Step 100 — Production Release gates and readiness review.
 
 ## Step 97 — Student dashboard
 
