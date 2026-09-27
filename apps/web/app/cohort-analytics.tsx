@@ -23,7 +23,8 @@ export function CohortAnalytics({data,loading,onRefresh}:{data:CohortAnalyticsDa
      ?Math.max(0,Math.min(100,Number(group.meanScore)/Number(group.totalMarks)*100)):0;
     return <article className="analytics-group" key={group.rubricVersionId}>
      <div className="analytics-title"><div><span className="eyebrow">IMMUTABLE RUBRIC VERSION</span><h3>{language} {writingType} · Rubric v{group.rubricVersion}</h3></div>
-      <span className="analytics-count">{group.finalizedCount} of {group.assessmentCount} finalized</span></div>
+      {!group.suppressed&&<span className="analytics-count">{group.finalizedCount} of {group.assessmentCount} finalized</span>}</div>
+     {group.suppressed?<p className="analytics-empty" role="status">Summary withheld for privacy because fewer than five learners are represented.</p>:<>
      <div className="analytics-metrics">
       <div><strong>{group.representedLearnerCount}</strong><span>Learners represented</span></div>
       <div><strong>{score(group.meanScore,group.totalMarks)}</strong><span>Mean current score</span></div>
@@ -33,6 +34,7 @@ export function CohortAnalytics({data,loading,onRefresh}:{data:CohortAnalyticsDa
       <span style={{width:`${percentage}%`}}/>
      </div>}
      <p className="analytics-status">{group.notFinalizedCount} awaiting finalization · {group.unavailableResultCount} finalized result{group.unavailableResultCount===1?'':'s'} unavailable</p>
+     </>}
     </article>;
    })}</div>
    <small className="analytics-asof">Snapshot time: {new Date(data.asOf).toLocaleString()}</small>
