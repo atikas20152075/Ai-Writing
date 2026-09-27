@@ -47,7 +47,7 @@ createServer(async(req,res)=>{
  if(path===`academic/cohorts/${batch}/assessments`&&role==='TEACHER'){send({assessments:[approved],nextCursor:null});return;}
  if(path===`academic/cohorts/${batch}/analytics`&&role==='TEACHER'){send({batchId:batch,programId:program,scope:'CURRENT_AUTHORIZED_ENROLLMENT',asOf:'2026-09-28T00:00:00.000Z',
   disclaimer:'Descriptive, assessment-weighted current results. Repeated assessments count separately; rubric versions are reported separately and are not comparable across groups.',
-  groups:[{rubricVersionId:'77777777-7777-4777-8777-777777777777',assessmentCount:3,finalizedCount:2,representedLearnerCount:2,
+  groups:[{rubricVersionId:'77777777-7777-4777-8777-777777777777',rubricVersion:1,writingType:'PARAGRAPH',language:'ENGLISH',assessmentCount:3,finalizedCount:2,representedLearnerCount:2,
    notFinalizedCount:1,unavailableResultCount:0,totalMarks:'10',meanScore:'7.5',minimumScore:'6',maximumScore:'9'}]});return;}
  if(path===`reports/assessments/${id}/pdf`&&role!=='SUPER_ADMIN'){res.writeHead(200,{'Content-Type':'application/pdf','Content-Language':'en'});res.end('%PDF-1.4\nSynthetic transport fixture, not an academic report.\n%%EOF');return;}
  send({},404);

@@ -37,6 +37,7 @@ test('teacher discovers assigned cohorts without entering private identifiers',a
  await expect(page.getByRole('heading',{name:'Assessment summary'})).toBeVisible();
  await expect(page.getByText('7.5 / 10',{exact:true})).toBeVisible();
  await expect(page.getByText('2 of 3 finalized',{exact:true})).toBeVisible();
+ await expect(page.getByText('English paragraph · Rubric v1',{exact:true})).toBeVisible();
  await expect(page.getByText(/rubric versions are reported separately/)).toBeVisible();
  await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
  await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();

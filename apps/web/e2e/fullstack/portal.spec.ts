@@ -100,6 +100,7 @@ test('real submission, independent human approval, linked-family privacy and liv
   await login(page,f.teacherEmail,f.password);
   await expect(page.getByLabel('Choose a cohort')).toHaveValue(f.batchId);
   await expect(page.getByRole('heading',{name:'Assessment summary'})).toBeVisible();
+  await expect(page.getByText('English paragraph · Rubric v1',{exact:true})).toBeVisible();
   await expect(page.getByRole('region',{name:'Cohort score summary'}).getByText('2 / 4',{exact:true})).toBeVisible();
   await expect(page.getByText('1 of 1 finalized',{exact:true})).toBeVisible();
   await expect(page.getByText('Books and new ideas',{exact:true})).toBeVisible();
@@ -136,6 +137,8 @@ test('Bangla report language reaches the scoped browser download',async({page})=
   const downloadEvent=page.waitForEvent('download');
   await page.getByRole('button',{name:'Download report'}).click();
   expect((await downloadEvent).suggestedFilename()).toBe(`writing-report-bn-${record.assessmentId.slice(0,8)}.pdf`);
+  await logout(page);await login(page,f.teacherEmail,f.password);
+  await expect(page.getByText('Bangla paragraph · Rubric v1',{exact:true})).toBeVisible();
 });
 
 test('real refresh rotation restores a browser session and DB revocation clears both cookies',async({page,context})=>{

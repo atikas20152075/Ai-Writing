@@ -475,6 +475,10 @@ test('Step98 cohort analytics stays current, authorization scoped, and separated
   assert.equal(first.groups.length,2);
   const v1=first.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!;
   const v2=first.groups.find((x:any)=>x.rubricVersionId===rubric2Id)!;
+  assert.deepEqual({rubricVersion:v1.rubricVersion,writingType:v1.writingType,language:v1.language},
+   {rubricVersion:1,writingType:'PARAGRAPH',language:'ENGLISH'});
+  assert.deepEqual({rubricVersion:v2.rubricVersion,writingType:v2.writingType,language:v2.language},
+   {rubricVersion:2,writingType:'PARAGRAPH',language:'ENGLISH'});
   assert.equal(v1.meanScore,'2');assert.equal(v1.finalizedCount,1);assert.equal(v1.notFinalizedCount,0);
   assert.equal(v2.meanScore,null);assert.equal(v2.finalizedCount,0);assert.equal(v2.notFinalizedCount,1);
   assert.equal('studentId' in v1,false);assert.equal('assessmentId' in v1,false);

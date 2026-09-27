@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 106 teacher cohort analytics view: **NO-GO for production or real learner data**. This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 107 readable rubric group labels: **NO-GO for production or real learner data**. This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
@@ -13,6 +13,7 @@
 - [Step 104 language-aware report downloads](docs/step104-multilingual-report-download.md)
 - [Step 105 Bangla report end-to-end verification](docs/step105-bangla-report-e2e.md)
 - [Step 106 teacher cohort analytics view](docs/step106-cohort-analytics-ui.md)
+- [Step 107 readable rubric group labels](docs/step107-rubric-group-labels.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
