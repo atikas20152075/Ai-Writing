@@ -9,6 +9,10 @@
     "apps/worker",
     "apps/web"
   ],
+  "overrides": {
+    "deepmerge-ts": "8.0.0",
+    "multer": "2.3.0"
+  },
   "engines": {
     "node": ">=22.16"
   },

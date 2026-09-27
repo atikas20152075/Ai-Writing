@@ -10,7 +10,7 @@
 - The API, web portal, and full-stack jobs use disposable PostgreSQL and synthetic `example.test` accounts. No production traffic or learner content is used.
 - `.env.example` keeps `AI_RELEASE_GATE_APPROVED=false` and `AI_CHILD_PROCESSING_APPROVED=false`; the worker also requires a separate explicit enable flag and trusted service configuration.
 - The repository contains the development Compose file and a validation workflow; no production deployment workflow or production environment evidence was found.
-- CI installs dependencies with `npm ci --no-audit --no-fund`. A dependency vulnerability audit result is therefore not part of the passing workflow evidence.
+- Step 101 adds a CI `npm audit --audit-level=high` gate and audited overrides for `multer` 2.3.0 and `deepmerge-ts` 8.0.0. The locked tree reports 0 critical, 0 high, 5 moderate and 1 low advisory on 2026-09-27. CI blocks high/critical regressions, while the residual findings remain subject to review.
 - The existing Step 92 closeout checklist continues to mark private artifact storage, accessible multilingual reports, independent child-data approvals, penetration/load testing, staging operations, and disaster recovery as open.
 
 ## Release gate decision
@@ -19,7 +19,7 @@
 |---|---|---|
 | Development behavior and regression checks | Synthetic API/PostgreSQL, web portal and desktop/mobile full-stack CI pass | Pass for development only |
 | API response privacy and browser headers | Step 99 middleware plus live synthetic HTTP assertions pass | Pass for this code boundary only |
-| Dependency vulnerability review | CI explicitly skips audit; no reviewed vulnerability report is attached | Block |
+| Dependency vulnerability review | Step 101 audits the locked tree and blocks high/critical advisories; 5 moderate and 1 low remain, including findings whose automatic fix requires a breaking NestJS major upgrade | Block pending residual advisory review and disposition |
 | AI scoring quality and child-data authority | AI approval defaults are false; no expert-adjudicated bilingual benchmark or legal/vendor approval is recorded | Block |
 | Accessible multilingual reports and private artifact lifecycle | Current PDF is English-only and generated in memory; Bengali typography/accessibility, private storage, retention and revocation lifecycle are not evidenced | Block |
 | Security and performance assurance | No independent penetration test, published load threshold, race review, or performance result is recorded | Block |
@@ -28,6 +28,6 @@
 
 ## Decision and next evidence required
 
-Keep production deployment and real learner-data processing disabled. Passing CI shows that the current synthetic development slice behaves as tested; it does not close any of the independent gates above. Reconsider the release decision only after each blocked item has a named owner, acceptance criteria, and independently reviewable evidence. The existing [Step 92 production closeout checklist](step92-production-closeout.md) remains authoritative for its detailed report and child-data requirements.
+Keep production deployment and real learner-data processing disabled. Passing CI shows that the current synthetic development slice behaves as tested; it does not close any of the independent gates above. The Step 101 audit gate reduces the known high/critical dependency findings to zero on the locked tree, but the six remaining moderate/low findings still require review and disposition before the dependency gate can close. Reconsider the release decision only after each blocked item has a named owner, acceptance criteria, and independently reviewable evidence. The existing [Step 92 production closeout checklist](step92-production-closeout.md) remains authoritative for its detailed report and child-data requirements.
 
 No release is authorized by this readiness review. No production environment, secret, deployment, or learner record was accessed or changed.
