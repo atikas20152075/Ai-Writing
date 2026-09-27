@@ -199,10 +199,10 @@ export class HumanReviewService {
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:20000});
   }
   async readCase(actor:Actor,id:string){
-    const c=await this.db.humanReviewCase.findUnique({where:{id}});
-    if(!c)throw new NotFoundException();
     // Current grant and educational authority, even for already resolved historical cases.
     return this.db.$transaction(async tx=>{
+      const c=await tx.humanReviewCase.findUnique({where:{id}});
+      if(!c)throw new NotFoundException();
       const {subject,s,a}=await this.subject(tx,c.assessmentId);
       if(['OPEN','PROPOSED'].includes(c.status)&&
         (c.priorRevisionId!==subject.effectiveScoreRevisionId||!['FINALIZED','HUMAN_REVIEW'].includes(subject.status)))
@@ -224,7 +224,7 @@ export class HumanReviewService {
           contentHash:s.verifiedText!.contentHash},effectiveScore:a.effectiveScoreRevision?{
           totalScore:a.effectiveScoreRevision.totalScore.toString(),totalMarks:a.effectiveScoreRevision.totalMarks.toString(),
           factorResults:a.effectiveScoreRevision.factorResults}:null,proposal};
-    });
+    },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:10000});
   }
 
   async queue(actor:Actor,batchId?:string){
