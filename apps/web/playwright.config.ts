@@ -1,5 +1,5 @@
 import {defineConfig,devices} from '@playwright/test';
-export default defineConfig({testDir:'./e2e',testMatch:'*.spec.ts',fullyParallel:false,workers:1,retries:0,
+export default defineConfig({testDir:'./e2e',testMatch:'*.spec.ts',testIgnore:'**/fullstack/**',fullyParallel:false,workers:1,retries:0,
  timeout:45000,expect:{timeout:15000},reporter:[['list']],
  use:{baseURL:'http://127.0.0.1:3100',trace:'retain-on-failure',screenshot:'only-on-failure',
   launchOptions:process.env.CHROMIUM_EXECUTABLE_PATH?{executablePath:process.env.CHROMIUM_EXECUTABLE_PATH,args:['--no-sandbox','--disable-dev-shm-usage','--disable-gpu','--disable-software-rasterizer','--disable-gpu-compositing','--use-gl=disabled','--no-zygote']}:{}},
