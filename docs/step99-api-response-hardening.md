@@ -1,6 +1,6 @@
 # Step 99 — API response hardening
 
-**Status:** implementation complete; CI verification pending.
+**Status:** PR #23 merged to `main` as `2a6a3b40932febb1e46245a7a1d4f4126d0e535c`. Exact-head CI run [36336277257](https://github.com/atikas20152075/Ai-Writing/actions/runs/36336277257) passed all three jobs, including the synthetic API/PostgreSQL/HTTP smoke suite.
 
 ## Scope delivered
 
@@ -12,5 +12,7 @@
 ## Limits
 
 This is an application response baseline, not a complete edge configuration. TLS termination, HSTS, WAF/DDoS controls, security monitoring, penetration testing, load thresholds, backup/restore, and disaster recovery still require production-like infrastructure and independent evidence. Existing child-data/privacy, expert benchmark, and vendor approval gates remain closed. No real learner data or deployment is involved.
+
+Local API typechecks, build, policy checks, the root 106-test suite, smoke-script syntax check, and `git diff --check` passed before review. The exact-head CI run confirmed the live headers through a loopback API backed by disposable PostgreSQL.
 
 **Next task pointer: Step 100 — Production Release gates and readiness review.**
