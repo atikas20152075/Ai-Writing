@@ -15,6 +15,10 @@ test('BFF denies unknown routes, path traversal, writes, client identity injecti
  assert.equal((await gateway(request('review-cases?batchId=bad'),env,noCall)).status,400);
  assert.equal((await gateway(request('review-cases?batchId=11111111-1111-4111-8111-111111111111&batchId=22222222-2222-4222-8222-222222222222'),env,noCall)).status,400);
  assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/extra'),env,noCall)).status,404);
+ const blocked=(async()=>Response.json({error:'blocked'},{status:401})) as typeof fetch;
+ assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/proposals','POST'),env,blocked)).status,401);
+ assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/decisions','POST'),env,blocked)).status,401);
+ assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/proposals/extra','POST'),env,noCall)).status,404);
  assert.equal((await gateway(request('auth/me','GET',{}, {'X-Writing-Client':''}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/login','POST',{}, {Origin:'https://attacker.example'}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/me','GET',{}, {'Sec-Fetch-Site':'same-site'}),env,noCall)).status,403);

@@ -199,13 +199,11 @@ export class HumanReviewService {
     },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:20000});
   }
   async readCase(actor:Actor,id:string){
-    const c=await this.db.humanReviewCase.findUnique({where:{id}});
-    if(!c)throw new NotFoundException();
-    const a=await this.db.assessment.findUnique({where:{id:c.assessmentId},include:{submission:{include:{student:true}}}});
-    if(!a)throw new NotFoundException();
     // Current grant and educational authority, even for already resolved historical cases.
     return this.db.$transaction(async tx=>{
-      const {subject}=await this.subject(tx,c.assessmentId);
+      const c=await tx.humanReviewCase.findUnique({where:{id}});
+      if(!c)throw new NotFoundException();
+      const {subject,s,a}=await this.subject(tx,c.assessmentId);
       if(['OPEN','PROPOSED'].includes(c.status)&&
         (c.priorRevisionId!==subject.effectiveScoreRevisionId||!['FINALIZED','HUMAN_REVIEW'].includes(subject.status)))
         throw new NotFoundException();
@@ -221,8 +219,12 @@ export class HumanReviewService {
       const proposal=await tx.humanReviewProposal.findUnique({where:{reviewCaseId:id},
         select:{id:true,proposedById:true,createdAt:true,reason:true,factorResults:true,totalScore:true,totalMarks:true}});
       return {caseId:id,assessmentId:c.assessmentId,kind:c.kind,status:c.status,openedAt:c.createdAt,
-        reason:c.reason,proposal};
-    });
+        reason:c.reason,priorRevisionId:c.priorRevisionId,effectiveRevisionId:subject.effectiveScoreRevisionId,
+        topic:s.topicSnapshot,rubric:s.rubricSnapshot,verifiedText:{language:s.verifiedText!.language,content:s.verifiedText!.content,
+          contentHash:s.verifiedText!.contentHash},effectiveScore:a.effectiveScoreRevision?{
+          totalScore:a.effectiveScoreRevision.totalScore.toString(),totalMarks:a.effectiveScoreRevision.totalMarks.toString(),
+          factorResults:a.effectiveScoreRevision.factorResults}:null,proposal};
+    },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:10000});
   }
 
   async queue(actor:Actor,batchId?:string){

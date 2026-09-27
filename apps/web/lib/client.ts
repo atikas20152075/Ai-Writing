@@ -45,4 +45,8 @@ export type Learning={assessmentId:string;assessmentStatus:string;effectiveRevis
 export type Cohort={id:string;name:string;programName:string};
 export type ReviewCase={caseId:string;assessmentId:string;batchId:string;topicTitle:string;status:string;kind:string;createdAt:string};
 export type ReviewCaseDetail={caseId:string;assessmentId:string;kind:string;status:string;openedAt:string;reason?:string;
- proposal?:null|{id:string;proposedById:string;createdAt:string;reason:string;factorResults:unknown;totalScore:string;totalMarks:string}};
+ priorRevisionId:string|null;effectiveRevisionId:string|null;topic:{title:string;instructions:string;clues:string[]};
+ rubric:{factors:{id:string;name:string;maxScore:string;criteria:{id:string;score:string;description:string}[]}[]};
+ verifiedText:{language:string;content:string;contentHash:string};
+ effectiveScore:null|{totalScore:string;totalMarks:string;factorResults:{factorId:string;criterionId:string;proposedScore:string;rationale:string;evidence:{startOffset:number;endOffset:number;exactQuote:string;claim:string}[]}[]};
+ proposal?:null|{id:string;proposedById:string;createdAt:string;reason:string;factorResults:{factorId:string;criterionId:string;proposedScore:string;rationale:string;evidence:{startOffset:number;endOffset:number;exactQuote:string;claim:string}[]}[];totalScore:string;totalMarks:string}};

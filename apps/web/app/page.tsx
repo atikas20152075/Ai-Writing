@@ -16,6 +16,8 @@ export default function Portal(){
  const [resultRow,setResultRow]=useState<Row|null>(null),[rewriteSource,setRewriteSource]=useState<{assessmentId:string;revisionId:string;programId:string;batchId:string;topicVersionId:string}|null>(null);
  const [correctionNote,setCorrectionNote]=useState('');
  const [reviewCases,setReviewCases]=useState<ReviewCase[]>([]),[reviewCase,setReviewCase]=useState<ReviewCaseDetail|null>(null);
+ const [reviewActionBusy,setReviewActionBusy]=useState(false),[reviewReason,setReviewReason]=useState('');
+ const [reviewFactors,setReviewFactors]=useState<Record<string,{criterionId:string;proposedScore:string;rationale:string;quote:string;claim:string}>>({});
  const [email,setEmail]=useState(''),[password,setPassword]=useState('');
  function message(value:string,isError=false){setNotice(value);setError(isError);}
  function clear(){client.current.clear();setMe(null);setRows([]);setOptions([]);setCohorts([]);setResult(null);setResultRow(null);setLearning(null);setLearningLoading(false);setRewriteSource(null);setCorrectionNote('');setReviewCases([]);setReviewCase(null);setText('');setPassword('');setSelection('');setBatch('');setCursor(null);setLoading(false);setSubmitting(false);pendingId.current=null;setView('overview');}
@@ -57,8 +59,37 @@ export default function Portal(){
   }catch(e){fail(e);}
  }
  async function openReviewCase(id:string){
-  try{setReviewCase(await client.current.request<ReviewCaseDetail>(`review-cases/${id}`,{channel:'review-case'}));}
+  try{const detail=await client.current.request<ReviewCaseDetail>(`review-cases/${id}`,{channel:'review-case'});
+   setReviewCase(detail);setReviewReason('');setReviewFactors(Object.fromEntries(detail.rubric.factors.map(f=>{
+    const prior=detail.effectiveScore?.factorResults.find(x=>x.factorId===f.id),criterion=f.criteria.find(x=>x.id===prior?.criterionId)??f.criteria[0];
+    return [f.id,{criterionId:criterion?.id??'',proposedScore:prior?.proposedScore??criterion?.score??'',
+     rationale:prior?.rationale??'Human reviewer evidence requires careful assessment.',quote:prior?.evidence[0]?.exactQuote??'',
+     claim:prior?.evidence[0]?.claim??''}];
+   })));}
   catch(e){fail(e);}
+ }
+ async function reviewAction(path:'proposals'|'decisions',payload:Record<string,unknown>){
+  if(!reviewCase||reviewActionBusy)return;setReviewActionBusy(true);message('');
+  try{await client.current.request(`review-cases/${reviewCase.caseId}/${path}`,{body:payload,channel:'review-action'});
+   client.current.capture('review-case');setReviewCase(null);setReviewCases([]);
+   const result=await client.current.request<{cases:ReviewCase[];truncated:boolean}>(`review-cases?batchId=${encodeURIComponent(batch)}`,{channel:'review-queue'});
+   setReviewCases(result.cases);
+   message(path==='proposals'?'Your immutable proposal was submitted for an independent reviewer.':'The review decision was recorded.');
+  }catch(e){fail(e);}finally{setReviewActionBusy(false);}
+ }
+ function submitReviewProposal(event:FormEvent){
+  event.preventDefault();if(!reviewCase)return;
+  const factorResults=reviewCase.rubric.factors.map(f=>{const prior=reviewCase.effectiveScore?.factorResults.find(x=>x.factorId===f.id);
+   const input=reviewFactors[f.id],quote=input?.quote??'',utf16Start=reviewCase.verifiedText.content.indexOf(quote);
+   const startOffset=utf16Start<0?-1:Array.from(reviewCase.verifiedText.content.slice(0,utf16Start)).length;
+   const endOffset=startOffset<0?-1:startOffset+Array.from(quote).length;
+   return {factorId:f.id,criterionId:input?.criterionId??prior?.criterionId??f.criteria[0]?.id,
+    proposedScore:input?.proposedScore??prior?.proposedScore??f.criteria[0]?.score,
+    rationale:input?.rationale??prior?.rationale??'',evidence:[{startOffset,endOffset,exactQuote:quote,claim:input?.claim??prior?.evidence[0]?.claim??''}]};
+  });
+  if(factorResults.some(f=>!f.evidence[0].exactQuote||f.evidence[0].startOffset<0||!f.evidence[0].claim.trim())){
+   message('Add an exact quote from the verified writing and explain what it shows for every factor.',true);return;}
+  void reviewAction('proposals',{factorResults,reason:reviewReason});
  }
  useEffect(()=>{
   mounted.current=true;
@@ -163,7 +194,38 @@ export default function Portal(){
     {academic&&<label className="cohort-select">Choose a cohort<select value={batch} onChange={e=>{setBatch(e.target.value);void listing(me,e.target.value);void loadReviewQueue(e.target.value);}}><option value="">Choose your assigned cohort</option>{cohorts.map(c=><option key={c.id} value={c.id}>{c.programName} · {c.name}</option>)}</select></label>}
      {academic&&<section className="review-queue" aria-label="Human review queue"><div className="section-heading"><div><span className="eyebrow">CURRENT AUTHORIZED REVIEWS</span><h2>Human review queue</h2></div><button className="secondary" disabled={!batch} onClick={()=>loadReviewQueue(batch)}>Refresh queue</button></div>
       {!reviewCases.length?<p className="empty">No open review cases in this assigned cohort.</p>:<div className="records">{reviewCases.map(item=><article className="record" key={item.caseId}><div className="paper-icon" aria-hidden="true">↺</div><div className="record-main"><h3>{item.topicTitle}</h3><p>{item.kind.replaceAll('_',' ').toLowerCase()} · Assessment {item.assessmentId.slice(0,8)}</p><span className="pill pending">{item.status.toLowerCase()}</span></div><button className="secondary" onClick={()=>openReviewCase(item.caseId)}>Review case</button></article>)}</div>}
-      {reviewCase&&<article className="review-detail" aria-live="polite"><div className="section-heading"><div><span className="eyebrow">{reviewCase.kind.replaceAll('_',' ')}</span><h3>Case {reviewCase.caseId.slice(0,8)}</h3></div><button className="text-button" onClick={()=>{client.current.capture('review-case');setReviewCase(null);}}>Close</button></div><p>{reviewCase.reason??'Case details are unavailable.'}</p>{reviewCase.proposal&&<><h4>Current proposal · {reviewCase.proposal.totalScore} / {reviewCase.proposal.totalMarks}</h4><p>{reviewCase.proposal.reason}</p><p>Proposal details are available to the assigned reviewer. Score changes still require an independent second reviewer.</p></>}</article>}
+      {reviewCase&&<article className="review-detail" aria-live="polite"><div className="section-heading"><div><span className="eyebrow">{reviewCase.kind.replaceAll('_',' ')}</span><h3>Case {reviewCase.caseId.slice(0,8)}</h3></div><button className="text-button" onClick={()=>{client.current.capture('review-case');setReviewCase(null);}}>Close</button></div>
+       <p>{reviewCase.reason??'Case details are unavailable.'}</p><h4>{reviewCase.topic.title} · Verified writing ({reviewCase.verifiedText.language})</h4>
+       <blockquote className="review-writing">{reviewCase.verifiedText.content}</blockquote>
+       <p>{reviewCase.topic.instructions}</p>{reviewCase.topic.clues?.length>0&&<p>Topic clues: {reviewCase.topic.clues.join(' · ')}</p>}
+       {reviewCase.effectiveScore&&<><h4>Current approved score · {reviewCase.effectiveScore.totalScore} / {reviewCase.effectiveScore.totalMarks}</h4>
+        <div className="factors">{reviewCase.effectiveScore.factorResults.map(f=><article key={f.factorId}><div><h3>{f.factorId}</h3><strong>{f.proposedScore}</strong></div><span className="pill">Criterion: {f.criterionId}</span><p>{f.rationale}</p>{f.evidence.map((e,i)=><blockquote key={i}><q>{e.exactQuote}</q><p>{e.claim}</p></blockquote>)}</article>)}</div></>}
+       {reviewCase.proposal?<><h4>Independent proposal · {reviewCase.proposal.totalScore} / {reviewCase.proposal.totalMarks}</h4><p>{reviewCase.proposal.reason}</p>
+        <div className="factors">{reviewCase.proposal.factorResults.map(f=><article key={f.factorId}><div><h3>{f.factorId}</h3><strong>{f.proposedScore}</strong></div><span className="pill">Criterion: {f.criterionId}</span><p>{f.rationale}</p>{f.evidence.map((e,i)=><blockquote key={i}><q>{e.exactQuote}</q><p>{e.claim}</p></blockquote>)}</article>)}</div>
+        {reviewCase.status==='PROPOSED'&&reviewCase.proposal.proposedById!==me?.userId&&<form className="review-form" onSubmit={e=>{e.preventDefault();void reviewAction('decisions',{decision:'APPROVE',reason:reviewReason});}}>
+         <label>Decision reason (20–2,000 characters)<textarea required minLength={20} maxLength={2000} rows={3} value={reviewReason} onChange={e=>setReviewReason(e.target.value)}/></label>
+         <div className="review-actions"><button className="primary" disabled={reviewActionBusy}>Approve proposal</button>
+          <button type="button" className="secondary" disabled={reviewActionBusy||reviewReason.trim().length<20} onClick={()=>void reviewAction('decisions',{decision:'REJECT',reason:reviewReason})}>Reject proposal</button></div>
+         <small>Decisions are permanent. A different currently assigned reviewer must decide.</small></form>}
+       </>:reviewCase.status==='OPEN'&&<div className="review-form">{reviewCase.effectiveScore&&<><h4>Keep the current score</h4>
+        <p>If the existing approved result is supported, an independent reviewer can record an uphold decision.</p>
+        <label>Decision reason (20–2,000 characters)<textarea required minLength={20} maxLength={2000} rows={3} value={reviewReason} onChange={e=>setReviewReason(e.target.value)}/></label>
+        <button className="secondary" disabled={reviewActionBusy||reviewReason.trim().length<20} onClick={()=>void reviewAction('decisions',{decision:'UPHOLD',reason:reviewReason})}>Uphold current score</button>
+        </>}
+        <form className="review-form" onSubmit={submitReviewProposal}><h4>{reviewCase.effectiveScore?'Or propose a correction':'Propose a human-reviewed score'}</h4>
+        {reviewCase.rubric.factors.map(f=>{const prior=reviewCase.effectiveScore?.factorResults.find(x=>x.factorId===f.id);
+         const value=reviewFactors[f.id]??{criterionId:prior?.criterionId??f.criteria[0]?.id??'',proposedScore:prior?.proposedScore??f.criteria[0]?.score??'',rationale:prior?.rationale??'',quote:prior?.evidence[0]?.exactQuote??'',claim:prior?.evidence[0]?.claim??''};
+         return <fieldset className="review-factor" key={f.id}><legend>{f.name}{prior?` · Current ${prior.proposedScore}`:` · Maximum ${f.maxScore}`}</legend>
+          <label>Published criterion<select required value={value.criterionId} onChange={e=>{const criterion=f.criteria.find(x=>x.id===e.target.value);if(criterion)setReviewFactors(old=>({...old,[f.id]:{...value,criterionId:e.target.value,proposedScore:criterion.score}}));}}>{f.criteria.map(x=><option key={x.id} value={x.id}>{x.description} · {x.score}</option>)}</select></label>
+          <label>Proposed score<input required inputMode="decimal" value={value.proposedScore} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,proposedScore:e.target.value}}))}/></label>
+          <label>Reasoning<textarea required minLength={12} maxLength={2000} rows={3} value={value.rationale} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,rationale:e.target.value}}))}/></label>
+          <label>Exact evidence quote<input required maxLength={1000} value={value.quote} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,quote:e.target.value}}))}/></label>
+          <label>What does it show?<input required minLength={5} maxLength={1000} value={value.claim} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,claim:e.target.value}}))}/></label>
+         </fieldset>})}
+        <label>Proposal reason (20–2,000 characters)<textarea required minLength={20} maxLength={2000} rows={3} value={reviewReason} onChange={e=>setReviewReason(e.target.value)}/></label>
+        <button className="primary" disabled={reviewActionBusy||reviewReason.trim().length<20}>Submit for independent review</button><small>Scores must match the published rubric. Evidence is checked against the verified writing. Your proposal does not change the score.</small>
+       </form></div>}
+      </article>}
      </section>}
      {loading?<div className="empty" aria-live="polite">Loading your current assessments…</div>:rows.length?<div className="records">{rows.map(row=><article className="record" key={row.assessmentId}><div className="paper-icon" aria-hidden="true">▤</div><div className="record-main"><h3>{row.topicTitle??'Writing assessment'}</h3><p>{me.role==='PARENT'&&row.studentId?'Student '+row.studentId.slice(0,8)+' · ':''}Assessment {row.assessmentId.slice(0,8)}</p><span className={'pill '+(row.status==='FINALIZED'?'approved':'pending')}>{row.status==='FINALIZED'?'Approved result':row.status.replaceAll('_',' ').toLowerCase()}</span>{row.reviewPending&&<span className="pill pending">Review pending</span>}</div><div className="record-score">{row.effectiveRevisionId?<><strong>{row.totalScore}<small> / {row.totalMarks}</small></strong><span>Current approved score</span></>:<span>{row.status==='FINALIZED'?'Open to view approved score':'Awaiting finalized score'}</span>}</div>{academic?<button className="secondary" disabled={!row.effectiveRevisionId} onClick={()=>download(row.assessmentId)}>English PDF</button>:<button className="secondary" onClick={()=>showResult(row)}>View result <span aria-hidden="true">↗</span></button>}</article>)}</div>:<div className="empty"><span aria-hidden="true">✧</span><h3>{student?'Your story starts with a first attempt.':'No assessments to show yet.'}</h3><p>{student?'Choose a topic and submit your original writing.':academic?'Choose a currently assigned cohort to see available work.':'Assessments appear here when your verified family links and current access permit them.'}</p>{student&&<button className="secondary" onClick={freshWriting}>Explore writing topics</button>}</div>}
      {cursor&&<button className="secondary next" onClick={()=>listing(me,batch,cursor)}>Next page →</button>}

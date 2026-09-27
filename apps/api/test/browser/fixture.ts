@@ -56,7 +56,7 @@ async function create(){
   await admin.bindRubric(rootActor,rubric.id);
   const other=await new SubmissionService(db).createTyped(actor(otherUser),{programId:program.id,batchId:otherBatch.id,
     topicVersionId:otherTopic.id,clientRequestId:randomUUID(),text:'A garden has many trees and flowers.'});
-  return {password,studentEmail:studentUser.email,parentEmail:parent.email,teacherEmail:teacher.email,
+  return {password,studentEmail:studentUser.email,parentEmail:parent.email,teacherEmail:teacher.email,reviewerEmail:reviewer.email,
     studentUserId:studentUser.id,studentId:student.id,parentId:parent.id,teacherId:teacher.id,reviewerId:reviewer.id,
     rootId:root.id,linkId:link.id,assignmentId:assignment.id,batchId:batch.id,otherBatchId:otherBatch.id,
     topicId:topic.id,otherStudentId:otherStudent.id,otherAssessmentId:other.assessmentId};
@@ -120,6 +120,15 @@ async function action(command:string,input:Record<string,string>){
         exactQuote:'books',claim:'The writing mentions books.'}}]});
     await db.assessment.update({where:{id:assessment.id},data:{status:'HUMAN_REVIEW'}});
     return new HumanReviewService(db).open(actor(teacher),assessment.id,reason);
+  }
+  if(command==='propose-review'){
+    const teacher=await syntheticUser(input.teacherId);
+    const reviews=new HumanReviewService(db);
+    const review=await reviews.open(actor(teacher),assessment.id,reason);
+    await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c4',proposedScore:'4',
+      rationale:'Synthetic proposal supported by the original verified writing evidence.',
+      evidence:[{startOffset:7,endOffset:12,exactQuote:'books',claim:'The verified text mentions books.'}]}],reason);
+    return {caseId:review.caseId};
   }
   if(command==='assert-db-guards'){
     const link=assessment.submission;
