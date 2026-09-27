@@ -43,3 +43,6 @@ export type Learning={assessmentId:string;assessmentStatus:string;effectiveRevis
   practice:null|{schemaVersion:string;revisionId:string;disclaimer:string;targets:{factorId:string;factorName:string;missedPoints:string;objective:string;selectedCriterion:string;originalEvidence:{exactQuote:string;claim:string}[]}[]};
   progress:null|{schemaVersion:string;revisionId:string;status:string;comparableCount:number;scoreDelta:string|null;disclaimer:string;displayedPoints:{assessmentId:string;score:string;totalMarks:string;createdAt:string}[]}}};
 export type Cohort={id:string;name:string;programName:string};
+export type ReviewCase={caseId:string;assessmentId:string;batchId:string;topicTitle:string;status:string;kind:string;createdAt:string};
+export type ReviewCaseDetail={caseId:string;assessmentId:string;kind:string;status:string;openedAt:string;reason?:string;
+ proposal?:null|{id:string;proposedById:string;createdAt:string;reason:string;factorResults:unknown;totalScore:string;totalMarks:string}};

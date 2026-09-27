@@ -9,9 +9,12 @@ function request(path:string,method='GET',body:unknown={},headers:Record<string,
 const noCall=(async()=>{assert.fail('Blocked request must never reach upstream');}) as typeof fetch;
 const auth=()=>Response.json({accessToken:'next.access'},{headers:{'Set-Cookie':'writing_refresh=next-refresh; Path=/api/v1/auth; HttpOnly'}});
 test('BFF denies unknown routes, path traversal, writes, client identity injection and malformed cursor',async()=>{
- for(const path of ['admin/programs','auth/refresh','auth/register','submissions/mine?guardianId=someone','parents/me/children/assessments?cursor=bad','parents/me/children/assessments?cursor=x&cursor=y'])
+  for(const path of ['admin/programs','auth/refresh','auth/register','submissions/mine?guardianId=someone','parents/me/children/assessments?cursor=bad','parents/me/children/assessments?cursor=x&cursor=y'])
   assert.ok([400,404].includes((await gateway(request(path),env,noCall)).status));
  assert.equal((await gateway(request('auth/me','POST'),env,noCall)).status,404);
+ assert.equal((await gateway(request('review-cases?batchId=bad'),env,noCall)).status,400);
+ assert.equal((await gateway(request('review-cases?batchId=11111111-1111-4111-8111-111111111111&batchId=22222222-2222-4222-8222-222222222222'),env,noCall)).status,400);
+ assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/extra'),env,noCall)).status,404);
  assert.equal((await gateway(request('auth/me','GET',{}, {'X-Writing-Client':''}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/login','POST',{}, {Origin:'https://attacker.example'}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/me','GET',{}, {'Sec-Fetch-Site':'same-site'}),env,noCall)).status,403);

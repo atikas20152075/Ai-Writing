@@ -1,4 +1,4 @@
-import {Body,Controller,Get,Inject,Param,ParseUUIDPipe,Post,Req,UseGuards,UseFilters} from '@nestjs/common';
+import {Body,Controller,Get,Inject,Param,ParseUUIDPipe,Post,Query,Req,UseGuards,UseFilters} from '@nestjs/common';
 import {JwtGuard,type AuthenticatedRequest} from '../auth/jwt.guard.ts';
 import {HumanReviewService} from './review.service.ts';
 import {ReviewErrorFilter} from './review-error.filter.ts';
@@ -15,6 +15,9 @@ export class OpenAssessmentReviewController {
 @Controller('review-cases') @UseGuards(JwtGuard) @UseFilters(ReviewErrorFilter)
 export class ReviewCasesController {
   constructor(@Inject(HumanReviewService)private readonly review:HumanReviewService){}
+  @Get() queue(@Req() req:AuthenticatedRequest,@Query('batchId',new ParseUUIDPipe({optional:true}))batchId?:string){
+    return this.review.queue(req.actor,batchId);
+  }
   @Get(':id') read(@Req() req:AuthenticatedRequest,@Param('id',new ParseUUIDPipe()) id:string){
     return this.review.readCase(req.actor,id);
   }

@@ -113,6 +113,14 @@ async function action(command:string,input:Record<string,string>){
     await reviews.decide(actor(reviewer),review.caseId,'APPROVE',reason);
     return {revised:true};
   }
+  if(command==='open-review'){
+    const teacher=await syntheticUser(input.teacherId);
+    await new AssessmentPersistenceService(db).publishHumanUnderstanding({assessmentId:assessment.id,reviewerId:teacher.id,
+      observations:[{category:'IDEA',finding:'Synthetic observation for a pending review.',evidence:{startOffset:7,endOffset:12,
+        exactQuote:'books',claim:'The writing mentions books.'}}]});
+    await db.assessment.update({where:{id:assessment.id},data:{status:'HUMAN_REVIEW'}});
+    return new HumanReviewService(db).open(actor(teacher),assessment.id,reason);
+  }
   if(command==='assert-db-guards'){
     const link=assessment.submission;
     assert.ok(link.rewriteOfAssessmentId&&link.rewriteOfRevisionId&&link.correctionNote);
