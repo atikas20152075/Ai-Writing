@@ -33,10 +33,6 @@ BEGIN
  IF NOT FOUND OR score.language<>expected_language OR
    NEW.snapshot->>'schemaVersion' IS DISTINCT FROM expected_schema OR
    NEW.snapshot->>'language' IS DISTINCT FROM expected_language OR
-   NEW."formatVersion" IS DISTINCT FROM CASE
-      WHEN NEW.snapshot->>'language'='BANGLA' THEN 'rubric-report-v2-bn'
-      WHEN NEW.snapshot->>'schemaVersion'='rubric-report-v2' THEN 'rubric-report-v2-en'
-      ELSE 'english-rubric-report-v1' END OR
    NEW.snapshot->>'assessmentId' IS DISTINCT FROM NEW."assessmentId"::text OR
    NEW.snapshot->>'scoreRevisionId' IS DISTINCT FROM NEW."scoreRevisionId"::text OR
    NEW.snapshot->>'rubricVersionId' IS DISTINCT FROM score."rubricVersionId"::text OR

@@ -40,6 +40,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install bounded Bangla PDF shaping dependencies
+        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
       - name: Create CI-only ephemeral secrets
         shell: bash
         run: |
@@ -87,7 +89,6 @@ jobs:
       - name: Python AI boundary tests
         run: |
           python -m pip install -e 'apps/ai-service[test]'
-          python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
           (cd apps/ai-service && python -m pytest -q)
           node --experimental-strip-types --test apps/api/test/report-policy.test.ts
   web-portal:
