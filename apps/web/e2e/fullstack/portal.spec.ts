@@ -2,6 +2,7 @@ import {test,expect,type Page} from '@playwright/test';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {readFile} from 'node:fs/promises';
+import {randomUUID} from 'node:crypto';
 const root=fileURLToPath(new URL('../../../../',import.meta.url));
 function fixture(command:string,input:Record<string,string>={}){
   return JSON.parse(execFileSync(process.execPath,[root+'node_modules/tsx/dist/cli.mjs',
@@ -101,4 +102,62 @@ test('real refresh rotation restores a browser session and DB revocation clears 
   await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeEnabled();
   expect((await context.cookies()).filter(c=>c.name.startsWith('writing_'))).toEqual([]);
   expect((await get(page,'submissions/mine')).status).toBe(401);
+});
+
+test('approved feedback guides a durable linked rewrite; stale and cross-child sources are denied',async({page})=>{
+  const f=fixture('create');await login(page,f.studentEmail,f.password);
+  await page.getByRole('button',{name:'New writing',exact:true}).click();
+  await page.getByLabel('Choose your topic').selectOption({label:'Books and new ideas · ENGLISH · Linked learner cohort'});
+  await page.getByLabel('Your writing',{exact:true}).fill('I like books. Reading helps me discover new ideas.');
+  const first=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/typed')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit writing'}).click();
+  const source=await (await first).json();
+  fixture('finalize',{userId:f.studentUserId,assessmentId:source.assessmentId,teacherId:f.teacherId,reviewerId:f.reviewerId});
+  fixture('build-learning',{userId:f.studentUserId,assessmentId:source.assessmentId});
+  await page.getByRole('button',{name:'Refresh',exact:true}).click();
+  await page.getByRole('button',{name:'View result'}).click();
+  await expect(page.getByRole('heading',{name:'Your next thoughtful draft'})).toBeVisible();
+  await expect(page.getByText('Partial',{exact:true})).toBeVisible();
+  await expect(page.getByText('Revise your writing with attention to Content.')).toBeVisible();
+  await expect(page.getByText('A second approved assessment using the same rubric is needed')).toBeVisible();
+  await page.getByRole('button',{name:'Plan a linked rewrite'}).click();
+  const note='I will organize my ideas around the book and add clearer examples.';
+  const writing='I like books. This revision explains how reading supports new ideas and learning.';
+  await page.getByLabel('What will you correct?').fill(note);
+  await page.getByLabel('Your writing',{exact:true}).fill(writing);
+  const rewriteResponse=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/rewrites')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit linked rewrite'}).click();
+  const response=await rewriteResponse;expect(response.status()).toBe(201);
+  const payload=response.request().postDataJSON();
+  const record=await response.json();expect(record).toMatchObject({status:'AWAITING_UNDERSTANDING',
+    rewriteOfAssessmentId:source.assessmentId,rewriteOfRevisionId:payload.expectedRevisionId,replayed:false});
+  expect(fixture('inspect-rewrite',{userId:f.studentUserId,assessmentId:record.assessmentId})).toEqual({
+    text:writing,status:'AWAITING_UNDERSTANDING',sourceAssessmentId:source.assessmentId,
+    sourceRevisionId:payload.expectedRevisionId,correctionNote:note,acceptedEvents:1});
+  expect(fixture('assert-db-guards',{userId:f.studentUserId,assessmentId:record.assessmentId,
+    otherStudentId:f.otherStudentId})).toEqual({blocked:true});
+  const replay=await page.evaluate(async body=>{
+    const r=await fetch('/api/portal/submissions/rewrites',{method:'POST',headers:{'X-Writing-Client':'portal','Content-Type':'application/json'},body:JSON.stringify(body)});
+    return {status:r.status,result:await r.json()};
+  },payload);
+  expect(replay.status).toBe(201);expect(replay.result).toMatchObject({submissionId:record.submissionId,replayed:true});
+  const changed=await page.evaluate(async body=>{
+    const r=await fetch('/api/portal/submissions/rewrites',{method:'POST',headers:{'X-Writing-Client':'portal','Content-Type':'application/json'},
+      body:JSON.stringify({...body,text:body.text+' Changed.'})});return r.status;
+  },payload);expect(changed).toBe(409);
+  const other=await page.evaluate(async body=>{
+    const r=await fetch('/api/portal/submissions/rewrites',{method:'POST',headers:{'X-Writing-Client':'portal','Content-Type':'application/json'},body:JSON.stringify(body)});
+    return r.status;
+  },{...payload,clientRequestId:randomUUID(),sourceAssessmentId:f.otherAssessmentId,expectedRevisionId:randomUUID()});
+  expect(other).toBe(404);
+  // Start another correction against revision 1, then approve a newer revision before submit.
+  await page.getByRole('button',{name:'View result'}).last().click();
+  await page.getByRole('button',{name:'Plan a linked rewrite'}).click();
+  await page.getByLabel('What will you correct?').fill(note);
+  await page.getByLabel('Your writing',{exact:true}).fill(writing+' A fresh example.');
+  fixture('revise',{userId:f.studentUserId,assessmentId:source.assessmentId,teacherId:f.teacherId,reviewerId:f.reviewerId});
+  const stale=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/rewrites')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit linked rewrite'}).click();
+  expect((await stale).status()).toBe(409);
+  await expect(page.getByLabel('Your writing',{exact:true})).toHaveValue(writing+' A fresh example.');
 });

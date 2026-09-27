@@ -28,10 +28,18 @@ createServer(async(req,res)=>{
  if(!role){send({},401);return;}
  if(path==='auth/me'){send({userId:student,role});return;}
  if(path==='auth/logout'){sessions.delete(token);for(const [key,s] of refreshes)if(s.access===token)refreshes.delete(key);send({loggedOut:true});return;}
- if(path==='submissions/mine'&&role==='STUDENT'){send([{id,createdAt:'2026-09-26T00:00:00Z',assessment:{id,status:'FINALIZED'}},{id:pending,createdAt:'2026-09-26T00:00:00Z',assessment:{id:pending,status:'AWAITING_UNDERSTANDING'}}]);return;}
+ if(path==='submissions/mine'&&role==='STUDENT'){send([{id,programId:program,batchId:batch,topicVersionId:topic,rewriteOfAssessmentId:null,rewriteOfRevisionId:null,createdAt:'2026-09-26T00:00:00Z',assessment:{id,status:'FINALIZED'}},{id:pending,programId:program,batchId:batch,topicVersionId:topic,rewriteOfAssessmentId:null,rewriteOfRevisionId:null,createdAt:'2026-09-26T00:00:00Z',assessment:{id:pending,status:'AWAITING_UNDERSTANDING'}}]);return;}
  if(path==='submissions/mine/writing-options'&&role==='STUDENT'){send({options:[{programId:program,batchId:batch,topicVersionId:topic,title:'The joy of reading',language:'ENGLISH',programName:'Guided writing',batchName:'Cadet writers',instructions:'Describe a book you enjoy and explain what reading means to you.',clues:['Your favourite book','What you learn','Why you enjoy it']}],truncated:false});return;}
  if(path==='submissions/typed'&&role==='STUDENT'){if(data.text.length<10||!data.clientRequestId){send({},400);return;}send({submissionId:pending,assessmentId:pending,status:'AWAITING_UNDERSTANDING'},201);return;}
  if(path===`assessments/mine/${id}/result`&&role==='STUDENT'){send(result);return;}
+ if(path===`assessments/mine/${id}/learning`&&role==='STUDENT'){send({assessmentId:id,assessmentStatus:'FINALIZED',effectiveRevisionId:id,
+  projections:[{target:'FEEDBACK',availability:'CURRENT'},{target:'PRACTICE',availability:'CURRENT'},{target:'PROGRESS',availability:'CURRENT'}],
+  learning:{feedback:{schemaVersion:'rubric-feedback-v1',revisionId:id,disclaimer:'Approved rubric-linked observations, synthetic only.',
+    factors:[{factorId:'content',name:'Content',score:'6',maxScore:'10',criterionDescription:'Relevant reading ideas.',rationale:'Synthetic approved fixture: relevant ideas with room for development.',evidence:[{exactQuote:'I enjoy reading.',claim:'Synthetic evidence fixture.'}]}]},
+    practice:{schemaVersion:'rubric-practice-targets-v1',revisionId:id,disclaimer:'Rubric-linked practice objective, synthetic only.',
+      targets:[{factorId:'content',factorName:'Content',missedPoints:'4',objective:'Revise your writing with attention to Content.',selectedCriterion:'Relevant reading ideas.',originalEvidence:[]}]},
+    progress:{schemaVersion:'comparable-progress-v1',revisionId:id,status:'INSUFFICIENT_DATA',comparableCount:1,scoreDelta:null,
+      disclaimer:'Descriptive only.',displayedPoints:[]}}});return;}
  if(path===`assessments/mine/${pending}/result`&&role==='STUDENT'){send({assessmentId:pending,status:'AWAITING_UNDERSTANDING',result:null});return;}
  if(path==='parents/me/children/assessments'&&role==='PARENT'){send({assessments:[url.searchParams.has('cursor')?awaiting:approved],nextCursor:url.searchParams.has('cursor')?null:id});return;}
  if(path===`parents/me/children/${student}/assessments/${id}/result`&&role==='PARENT'){send(result);return;}

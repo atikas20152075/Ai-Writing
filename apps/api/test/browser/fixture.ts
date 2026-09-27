@@ -10,6 +10,7 @@ import {AdminService} from '../../src/admin/admin.service.ts';
 import {SubmissionService} from '../../src/submission/submission.service.ts';
 import {AssessmentPersistenceService} from '../../src/assessment/assessment-persistence.service.ts';
 import {HumanReviewService} from '../../src/review/review.service.ts';
+import {ProjectionService} from '../../src/projections/projection.service.ts';
 
 requireDisposableBrowserDatabase();
 const db=new PrismaService();
@@ -90,6 +91,43 @@ async function action(command:string,input:Record<string,string>){
   if(command==='inspect')return {text:assessment.submission.verifiedText?.content,status:assessment.status,
     submissionCount:await db.submission.count({where:{studentId:assessment.submission.studentId}}),
     acceptedEvents:await db.outboxEvent.count({where:{dedupeKey:'submission-'+assessment.submissionId}})};
+  if(command==='inspect-rewrite')return {text:assessment.submission.verifiedText?.content,status:assessment.status,
+    sourceAssessmentId:assessment.submission.rewriteOfAssessmentId,
+    sourceRevisionId:assessment.submission.rewriteOfRevisionId,
+    correctionNote:assessment.submission.correctionNote,
+    acceptedEvents:await db.outboxEvent.count({where:{dedupeKey:'submission-'+assessment.submissionId}})};
+  if(command==='build-learning'){
+    const service=new ProjectionService(db);
+    const results=[];
+    for(let i=0;i<4;i++)results.push(await service.processOne(assessment.id));
+    assert.deepEqual(results.map(x=>x.status),['REBUILT','REBUILT','REBUILT','REBUILT']);
+    return {built:true};
+  }
+  if(command==='revise'){
+    const teacher=await syntheticUser(input.teacherId),reviewer=await syntheticUser(input.reviewerId);
+    const reviews=new HumanReviewService(db);
+    const review=await reviews.open(actor(teacher),assessment.id,reason);
+    await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c4',proposedScore:'4',
+      rationale:'Synthetic revised evidence supports the published full content criterion.',
+      evidence:[{startOffset:7,endOffset:12,exactQuote:'books',claim:'The writing mentions books.'}]}],reason);
+    await reviews.decide(actor(reviewer),review.caseId,'APPROVE',reason);
+    return {revised:true};
+  }
+  if(command==='assert-db-guards'){
+    const link=assessment.submission;
+    assert.ok(link.rewriteOfAssessmentId&&link.rewriteOfRevisionId&&link.correctionNote);
+    const wrong=await db.student.findUniqueOrThrow({where:{id:input.otherStudentId}});
+    assert.notEqual(wrong.userId,user.id);
+    await assert.rejects(db.submission.create({data:{studentId:wrong.id,
+      programId:link.programId,batchId:link.batchId,topicVersionId:link.topicVersionId,
+      rubricVersionId:link.rubricVersionId,clientRequestId:randomUUID(),
+      rewriteOfAssessmentId:link.rewriteOfAssessmentId,rewriteOfRevisionId:link.rewriteOfRevisionId,
+      correctionNote:link.correctionNote,topicSnapshot:link.topicSnapshot as any,rubricSnapshot:link.rubricSnapshot as any,
+      topicHash:link.topicHash,rubricHash:link.rubricHash}}),/REWRITE_SOURCE_NOT_CURRENT_OR_SCOPED/);
+    await assert.rejects(db.submission.update({where:{id:link.id},data:{correctionNote:'Silently replacing the immutable student plan is not permitted.'}}),
+      /REWRITE_LINK_IMMUTABLE/);
+    return {blocked:true};
+  }
   if(command==='finalize'){
     const teacher=await syntheticUser(input.teacherId),reviewer=await syntheticUser(input.reviewerId);
     await new AssessmentPersistenceService(db).publishHumanUnderstanding({assessmentId:assessment.id,reviewerId:teacher.id,

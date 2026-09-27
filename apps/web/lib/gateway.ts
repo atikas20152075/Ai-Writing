@@ -52,7 +52,7 @@ export async function gateway(request:Request,env:Env=process.env,transport:type
   path=url.pathname.replace(/^\/api\/portal\//,'');
   const method=request.method;
   if(!['GET','POST'].includes(method))return json({error:'Method unavailable'},405);
-  const allowed=method==='GET'?reads.some(x=>x.test(path)):['auth/login','auth/session','auth/logout','submissions/typed'].includes(path);
+  const allowed=method==='GET'?reads.some(x=>x.test(path)):['auth/login','auth/session','auth/logout','submissions/typed','submissions/rewrites'].includes(path);
   if(!allowed)return json({error:'Route unavailable'},404);
   // Custom header requires a CORS preflight cross-origin; no CORS permission is emitted.
   if(request.headers.get('x-writing-client')!=='portal'||
