@@ -48,6 +48,8 @@ jobs:
           echo "LOCAL_PROVISION_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Block high and critical dependency advisories
+        run: npm audit --audit-level=high
       - name: TypeScript domain and pure-policy checks
         run: |
           npm test
