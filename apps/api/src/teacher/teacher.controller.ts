@@ -11,4 +11,9 @@ export class TeacherDashboardController{
   if(!['TEACHER','ACADEMIC_ADMIN'].includes(req.actor.role))throw new ForbiddenException();
   return this.dashboard.cohort(req.actor,batchId,cursor);
  }
+ @Get(':batchId/analytics') @Header('Cache-Control','private, no-store, max-age=0')analytics(@Req()req:AuthenticatedRequest,
+  @Param('batchId',new ParseUUIDPipe())batchId:string){
+  if(!['TEACHER','ACADEMIC_ADMIN'].includes(req.actor.role))throw new ForbiddenException();
+  return this.dashboard.analytics(req.actor,batchId);
+ }
 }

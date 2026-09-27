@@ -448,3 +448,46 @@ test('Step93 cohort discovery returns only active assigned batches and rejects g
   assert.deepEqual((await dashboard.mine(actor(f.a))).cohorts,[]);
  });
 });
+
+test('Step98 cohort analytics stays current, authorization scoped, and separated by immutable rubric',{skip:!enabled},async()=>{
+ await rollbackCase(async tx=>{
+  const f=await finalized(tx);
+  const original=await tx.submission.findUniqueOrThrow({where:{id:f.assessment.submissionId}});
+  const teacher=await tx.user.create({data:{email:`analytics-${randomUUID()}@example.test`,role:'TEACHER',passwordHash:'SYNTHETIC'}});
+  const assignment=await tx.teacherBatch.create({data:{teacherId:teacher.id,batchId:original.batchId}});
+  const dashboard=new TeacherDashboardService({$transaction:(cb:any)=>cb(tx)} as any);
+  const secondUser=await tx.user.create({data:{email:`analytics-student-${randomUUID()}@example.test`,role:'STUDENT',passwordHash:'SYNTHETIC'}});
+  const secondStudent=await tx.student.create({data:{userId:secondUser.id}});
+  await tx.enrollment.create({data:{studentId:secondStudent.id,programId:original.programId,batchId:original.batchId}});
+  await tx.processingAuthority.create({data:{studentId:secondStudent.id,programId:original.programId,
+   purpose:'CORE_ASSESSMENT',legalBasis:'SYNTHETIC_ONLY',policyVersion:'step98',approvedById:f.a.id}});
+  const rubric2Id=randomUUID();
+  const rubric2={...(original.rubricSnapshot as any),id:rubric2Id,versionId:rubric2Id};
+  await tx.rubricVersion.create({data:{id:rubric2Id,programId:original.programId,writingType:'PARAGRAPH',
+   language:'ENGLISH',version:2,status:'PUBLISHED',snapshot:rubric2,snapshotHash:hash(canonicalJson(rubric2)),publishedAt:new Date()}});
+  const submission2=await tx.submission.create({data:{studentId:secondStudent.id,programId:original.programId,
+   batchId:original.batchId,topicVersionId:original.topicVersionId,rubricVersionId:rubric2Id,
+   clientRequestId:randomUUID(),topicSnapshot:original.topicSnapshot,rubricSnapshot:rubric2,
+   topicHash:original.topicHash,rubricHash:hash(canonicalJson(rubric2))}});
+  await tx.assessment.create({data:{submissionId:submission2.id}});
+
+  const first=await dashboard.analytics(actor(teacher),original.batchId);
+  assert.equal(first.groups.length,2);
+  const v1=first.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!;
+  const v2=first.groups.find((x:any)=>x.rubricVersionId===rubric2Id)!;
+  assert.equal(v1.meanScore,'2');assert.equal(v1.finalizedCount,1);assert.equal(v1.notFinalizedCount,0);
+  assert.equal(v2.meanScore,null);assert.equal(v2.finalizedCount,0);assert.equal(v2.notFinalizedCount,1);
+  assert.equal('studentId' in v1,false);assert.equal('assessmentId' in v1,false);
+
+  const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
+  await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
+  await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
+  const updated=await dashboard.analytics(actor(teacher),original.batchId);
+  assert.equal(updated.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!.meanScore,'4');
+  await tx.teacherBatch.update({where:{id:assignment.id},data:{endedAt:new Date()}});
+  await assert.rejects(dashboard.analytics(actor(teacher),original.batchId),/Not Found|NotFound/i);
+  await assert.rejects(dashboard.analytics(actor(f.user),original.batchId),/Forbidden/i);
+  const superUser=await tx.user.create({data:{email:`analytics-super-${randomUUID()}@example.test`,role:'SUPER_ADMIN',passwordHash:'SYNTHETIC'}});
+  await assert.rejects(dashboard.analytics(actor(superUser),original.batchId),/Forbidden/i);
+ });
+});

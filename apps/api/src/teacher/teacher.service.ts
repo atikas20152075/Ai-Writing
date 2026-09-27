@@ -81,4 +81,57 @@ export class TeacherDashboardService{
     nextCursor:rows.length>20?last?.assessmentId??null:null};
   },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:10000});
  }
+
+ async analytics(actor:Actor,batchId:string){
+  if(actor.role!=='TEACHER'&&actor.role!=='ACADEMIC_ADMIN')throw new ForbiddenException();
+  return this.db.$transaction(async tx=>{
+   // Resolve the scope and the actor in the same snapshot as the aggregate.
+   // A revoked assignment, inactive user/program, or inactive batch is unavailable.
+   const scope=await tx.$queryRaw<Array<{batchId:string;programId:string;asOf:Date}>>`
+    SELECT b.id AS "batchId",p.id AS "programId",transaction_timestamp() AS "asOf"
+    FROM "Batch" b JOIN "AcademicProgram" p ON p.id=b."programId" AND p.status='ACTIVE'
+    JOIN "User" u ON u.id=${actor.userId}::uuid AND u.status='ACTIVE' AND u.role::text=${actor.role}
+    WHERE b.id=${batchId}::uuid AND b.active=true AND (
+     (u.role='TEACHER' AND EXISTS(SELECT 1 FROM "TeacherBatch" t WHERE t."teacherId"=u.id
+       AND t."batchId"=b.id AND t."assignedAt"<=statement_timestamp() AND t."endedAt" IS NULL)) OR
+     (u.role='ACADEMIC_ADMIN' AND EXISTS(SELECT 1 FROM "AcademicAdminProgram" g WHERE g."userId"=u.id
+       AND g."programId"=p.id AND g."assignedAt"<=statement_timestamp() AND g."endedAt" IS NULL)))`;
+   const authorized=scope[0];
+   if(!authorized)throw new NotFoundException();
+   const rows=await tx.$queryRaw<Array<{rubricVersionId:string;totalMarks:Prisma.Decimal|null;
+     assessmentCount:bigint;finalizedCount:bigint;representedLearnerCount:bigint;
+     notFinalizedCount:bigint;unavailableResultCount:bigint;meanScore:Prisma.Decimal|null;minimumScore:Prisma.Decimal|null;
+     maximumScore:Prisma.Decimal|null}>>`
+    SELECT s."rubricVersionId",MAX(r."totalMarks") AS "totalMarks",
+     COUNT(a.id)::bigint AS "assessmentCount",
+     COUNT(r.id)::bigint AS "finalizedCount",
+     COUNT(DISTINCT s."studentId") FILTER (WHERE r.id IS NOT NULL)::bigint AS "representedLearnerCount",
+     COUNT(a.id) FILTER (WHERE a.status<>'FINALIZED')::bigint AS "notFinalizedCount",
+     COUNT(a.id) FILTER (WHERE a.status='FINALIZED' AND r.id IS NULL)::bigint AS "unavailableResultCount",
+     ROUND(AVG(r."totalScore"),2) AS "meanScore",MIN(r."totalScore") AS "minimumScore",
+     MAX(r."totalScore") AS "maximumScore"
+    FROM "Submission" s
+    JOIN "Assessment" a ON a."submissionId"=s.id
+    LEFT JOIN "AssessmentScoreRevision" r ON r.id=a."effectiveScoreRevisionId"
+     AND r."assessmentId"=a.id AND a.status='FINALIZED'
+    WHERE s."programId"=${authorized.programId}::uuid AND s."batchId"=${authorized.batchId}::uuid
+     AND s.status='ACCEPTED'
+     AND EXISTS(SELECT 1 FROM "Enrollment" e WHERE e."studentId"=s."studentId"
+       AND e."programId"=s."programId" AND e."batchId"=s."batchId"
+       AND e.status='ACTIVE' AND e."startedAt"<=statement_timestamp() AND e."endedAt" IS NULL)
+     AND EXISTS(SELECT 1 FROM "ProcessingAuthority" p WHERE p."studentId"=s."studentId"
+       AND p."programId"=s."programId" AND p.purpose='CORE_ASSESSMENT'
+       AND p.status='ACTIVE' AND p."endedAt" IS NULL)
+    GROUP BY s."rubricVersionId" ORDER BY s."rubricVersionId"`;
+   return {batchId:authorized.batchId,programId:authorized.programId,scope:'CURRENT_AUTHORIZED_ENROLLMENT',
+    asOf:authorized.asOf.toISOString(),
+    disclaimer:'Descriptive, assessment-weighted current results. Repeated assessments count separately; rubric versions are reported separately and are not comparable across groups.',
+    groups:rows.map(x=>({rubricVersionId:x.rubricVersionId,
+     assessmentCount:Number(x.assessmentCount),finalizedCount:Number(x.finalizedCount),
+     representedLearnerCount:Number(x.representedLearnerCount),notFinalizedCount:Number(x.notFinalizedCount),
+     unavailableResultCount:Number(x.unavailableResultCount),
+     totalMarks:x.totalMarks?.toString()??null,meanScore:x.meanScore?.toString()??null,
+     minimumScore:x.minimumScore?.toString()??null,maximumScore:x.maximumScore?.toString()??null}))};
+  },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:10000});
+ }
 }
