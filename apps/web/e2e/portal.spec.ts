@@ -9,7 +9,7 @@ test('student signs in, submits original writing, sees pending and approved resu
  expect(await page.evaluate(()=>document.cookie)).not.toMatch(/writing_access|writing_refresh/);
  const cookies=await context.cookies();expect(cookies.filter(c=>c.name.startsWith('writing_')).every(c=>c.httpOnly&&c.sameSite==='Strict')).toBeTruthy();
  await page.getByRole('button',{name:'View result'}).last().click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
- await page.getByRole('button',{name:'View result'}).first().click();await expect(page.getByText('Synthetic approved fixture:',{exact:false})).toBeVisible();
+ await page.getByRole('button',{name:'View result'}).first().click();await expect(page.getByText('Synthetic approved fixture:',{exact:false}).first()).toBeVisible();
  await page.screenshot({path:info.outputPath('student-result.png'),fullPage:true});
  await page.getByRole('button',{name:'New writing',exact:true}).click();await expect(page.getByRole('heading',{name:'Your approved result'})).toHaveCount(0);await page.getByLabel('Choose your topic').selectOption({index:1});
  await expect(page.getByText('Your favourite book',{exact:true})).toBeVisible();await page.getByLabel('Your writing',{exact:true}).fill('I enjoy reading. Books help me discover new places and ideas.');
