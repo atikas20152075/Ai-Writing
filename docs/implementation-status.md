@@ -71,6 +71,10 @@ Adds immutable language-specific v2 report snapshots while preserving v1 history
 
 Carries the API's validated `en`/`bn-BD` report language through the BFF, fails closed when PDF language metadata is missing or unsupported, produces language-specific filenames, and removes English-only labels from the portal. Local gateway checks cover both locales; synthetic English portal browser flows verify the download path. PDF accessibility and real learner-data release remain blocked. See [Step104 details](step104-multilingual-report-download.md).
 
+### Step 105 — Bangla report end-to-end verification (development)
+
+Adds a disposable synthetic Bangla topic/rubric fixture and verifies the real browser path through approved report generation and the authenticated BFF: `bn-BD` language header, Bangla-specific attachment name, PDF bytes and browser filename. All data and scoring remain synthetic. Bangla scoring quality, PDF accessibility, expert review and production release remain blocked. See [Step105 details](step105-bangla-report-e2e.md).
+
 ## Step93 continuation — current portal scope
 
 PRs #11–12 added a local static student/teacher preview and scoped topic catalog/typed editor. The follow-up [family portal and session-safety increment](step93-family-portal.md) adds verified-family discovery/detail, parent/teacher pagination, and late-response fencing. The web workspace is still **not Next.js**. Step92 production closeout, browser E2E, bilingual reports and real-model/child-data approvals remain open. See the linked evidence for exact checks; historical sections above remain historical snapshots.
