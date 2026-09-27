@@ -45,6 +45,9 @@ export type Learning={assessmentId:string;assessmentStatus:string;effectiveRevis
   practice:null|{schemaVersion:string;revisionId:string;disclaimer:string;targets:{factorId:string;factorName:string;missedPoints:string;objective:string;selectedCriterion:string;originalEvidence:{exactQuote:string;claim:string}[]}[]};
   progress:null|{schemaVersion:string;revisionId:string;status:string;comparableCount:number;scoreDelta:string|null;disclaimer:string;displayedPoints:{assessmentId:string;score:string;totalMarks:string;createdAt:string}[]}}};
 export type Cohort={id:string;name:string;programName:string};
+export type CohortAnalytics={batchId:string;programId:string;scope:'CURRENT_AUTHORIZED_ENROLLMENT';asOf:string;disclaimer:string;
+ groups:{rubricVersionId:string;assessmentCount:number;finalizedCount:number;representedLearnerCount:number;notFinalizedCount:number;
+  unavailableResultCount:number;totalMarks:string|null;meanScore:string|null;minimumScore:string|null;maximumScore:string|null}[]};
 export type ReviewCase={caseId:string;assessmentId:string;batchId:string;topicTitle:string;status:string;kind:string;createdAt:string};
 export type ReviewCaseDetail={caseId:string;assessmentId:string;kind:string;status:string;openedAt:string;reason?:string;
  priorRevisionId:string|null;effectiveRevisionId:string|null;topic:{title:string;instructions:string;clues:string[]};

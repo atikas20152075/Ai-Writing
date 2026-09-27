@@ -1,8 +1,9 @@
 'use client';
 import {useEffect,useRef,useState,type FormEvent} from 'react';
-import {PortalClient,Superseded,APIError,authLock,type Me,type Option,type Row,type Result,type Cohort,type Learning,type ReviewCase,type ReviewCaseDetail} from '../lib/client';
+import {PortalClient,Superseded,APIError,authLock,type Me,type Option,type Row,type Result,type Cohort,type CohortAnalytics as CohortAnalyticsData,type Learning,type ReviewCase,type ReviewCaseDetail} from '../lib/client';
 import {StudentLearning} from './student-learning';
 import {StudentDashboard} from './student-dashboard';
+import {CohortAnalytics} from './cohort-analytics';
 type View='overview'|'write'|'results';
 const validId=(s:string)=>/^[0-9a-f-]{36}$/i.test(s);
 export default function Portal(){
@@ -11,6 +12,7 @@ export default function Portal(){
  const [me,setMe]=useState<Me|null>(null),[busy,setBusy]=useState(true),[view,setView]=useState<View>('overview');
  const [notice,setNotice]=useState(''),[error,setError]=useState(false),[loading,setLoading]=useState(false);
  const [rows,setRows]=useState<Row[]>([]),[options,setOptions]=useState<Option[]>([]),[cohorts,setCohorts]=useState<Cohort[]>([]);
+ const [cohortAnalytics,setCohortAnalytics]=useState<CohortAnalyticsData|null>(null),[analyticsLoading,setAnalyticsLoading]=useState(false);
  const [selection,setSelection]=useState(''),[batch,setBatch]=useState(''),[cursor,setCursor]=useState<string|null>(null);
  const [text,setText]=useState(''),[submitting,setSubmitting]=useState(false),[result,setResult]=useState<Result|null>(null);
  const [learning,setLearning]=useState<Learning|null>(null),[learningLoading,setLearningLoading]=useState(false);
@@ -21,7 +23,7 @@ export default function Portal(){
  const [reviewFactors,setReviewFactors]=useState<Record<string,{criterionId:string;proposedScore:string;rationale:string;quote:string;claim:string}>>({});
  const [email,setEmail]=useState(''),[password,setPassword]=useState('');
  function message(value:string,isError=false){setNotice(value);setError(isError);}
- function clear(){client.current.clear();setMe(null);setRows([]);setOptions([]);setCohorts([]);setResult(null);setResultRow(null);setLearning(null);setLearningLoading(false);setRewriteSource(null);setCorrectionNote('');setReviewCases([]);setReviewCase(null);setText('');setPassword('');setSelection('');setBatch('');setCursor(null);setLoading(false);setSubmitting(false);pendingId.current=null;setView('overview');}
+ function clear(){client.current.clear();setMe(null);setRows([]);setOptions([]);setCohorts([]);setCohortAnalytics(null);setAnalyticsLoading(false);setResult(null);setResultRow(null);setLearning(null);setLearningLoading(false);setRewriteSource(null);setCorrectionNote('');setReviewCases([]);setReviewCase(null);setText('');setPassword('');setSelection('');setBatch('');setCursor(null);setLoading(false);setSubmitting(false);pendingId.current=null;setView('overview');}
  function fail(e:unknown){if(e instanceof Superseded||!mounted.current)return;if(e instanceof APIError&&e.status===401)clear();message(e instanceof Error?e.message:'Please try again.',true);}
  async function listing(user:Me,batchId='',next:string|null=null){
   const current=client.current.capture('list-operation');client.current.capture('result-view');client.current.capture('result');client.current.capture('learning');
@@ -53,7 +55,7 @@ export default function Portal(){
   else if(['TEACHER','ACADEMIC_ADMIN'].includes(user.role)){
    const data=await client.current.request<{cohorts:Cohort[];truncated:boolean}>('academic/cohorts/mine',{channel:'cohorts'});
    setCohorts(data.cohorts);if(data.truncated)message('Showing the first 100 assigned cohorts.');
-   if(data.cohorts[0]){setBatch(data.cohorts[0].id);await listing(user,data.cohorts[0].id);await loadReviewQueue(data.cohorts[0].id);}
+   if(data.cohorts[0]){setBatch(data.cohorts[0].id);await Promise.all([listing(user,data.cohorts[0].id),loadReviewQueue(data.cohorts[0].id),loadCohortAnalytics(data.cohorts[0].id)]);}
   }
  }
  async function loadReviewQueue(batchId:string){
@@ -61,6 +63,14 @@ export default function Portal(){
   try{const result=await client.current.request<{cases:ReviewCase[];truncated:boolean}>(`review-cases?batchId=${encodeURIComponent(batchId)}`,{channel:'review-queue'});
    setReviewCases(result.cases);if(result.truncated)message('Showing the first 100 open review cases.');
   }catch(e){fail(e);}
+ }
+ async function loadCohortAnalytics(batchId:string){
+  const current=client.current.capture('analytics-view');client.current.capture('analytics');
+  setCohortAnalytics(null);if(!batchId){setAnalyticsLoading(false);return;}
+  setAnalyticsLoading(true);
+  try{const data=await client.current.request<CohortAnalyticsData>(`academic/cohorts/${batchId}/analytics`,{channel:'analytics'});
+   current();setCohortAnalytics(data);
+  }catch(e){fail(e);}finally{try{current();setAnalyticsLoading(false);}catch{}}
  }
  async function openReviewCase(id:string){
   try{const detail=await client.current.request<ReviewCaseDetail>(`review-cases/${id}`,{channel:'review-case'});
@@ -206,7 +216,8 @@ export default function Portal(){
       onOpen={row=>void showResult(row)} onHistory={()=>setView('results')}/>}
     {view==='overview'&&!student&&<section className="journey" aria-label="PFCR learning method"><div className="journey-intro"><span className="eyebrow">THE PFCR METHOD</span><h2>One draft.<br/>Four ways to grow.</h2><p>Make improvement a habit.</p></div>{[['01','Practice','Put your own ideas into words.'],['02','Feedback','Read your approved assessment carefully.'],['03','Correction','Think through what you can improve.'],['04','Rewrite','Use what you learn in your next attempt.']].map(([n,t,d])=><div className="journey-step" key={n}><span>{n}</span><h3>{t}</h3><p>{d}</p></div>)}</section>}
     {view==='write'&&student?<section className="writing-layout"><form className="card editor" onSubmit={submit}><div className="section-heading"><div><span className="eyebrow">{rewriteSource?'LINKED REWRITE · CORRECTION PLAN':'YOUR ORIGINAL WORK'}</span><h2>{rewriteSource?'A fresh answer, guided by your plan.':'A fresh page, a fresh idea.'}</h2></div><span className="pill">Guided writing</span></div><label>Choose your topic<select required disabled={submitting||!!rewriteSource} value={selection} onChange={e=>{setSelection(e.target.value);pendingId.current=null;}}><option value="">{options.length?'Select a published topic':'No topics available yet'}</option>{options.map(o=><option key={[o.topicVersionId,o.batchId,o.programId].join('|')} value={[o.topicVersionId,o.batchId,o.programId].join('|')}>{o.title} · {o.language} · {o.batchName}</option>)}</select></label>{selected&&<div className="prompt"><strong>{selected.title}</strong><p>{selected.instructions}</p>{selected.clues?.length>0&&<ul>{selected.clues.map((c,i)=><li key={i}>{c}</li>)}</ul>}</div>}{rewriteSource&&<div className="correction-plan"><p>Linked to approved assessment {rewriteSource.assessmentId.slice(0,8)} · keep your own ideas and revise with purpose.</p><label>What will you correct?<textarea rows={4} minLength={20} maxLength={2000} required disabled={submitting} value={correctionNote} placeholder="Explain the idea, structure or language you will improve based on your feedback." onChange={e=>{setCorrectionNote(e.target.value);pendingId.current=null;}}/></label><button type="button" className="text-button" onClick={freshWriting} disabled={submitting}>Start unrelated writing instead</button></div>}<label>Your writing<textarea rows={13} minLength={10} maxLength={24000} required disabled={submitting} value={text} placeholder="Start with an idea. Let the next sentence follow…" onChange={e=>{setText(e.target.value);pendingId.current=null;}}/></label><div className="editor-footer"><span>{text.trim()?text.trim().split(/\s+/u).length:0} words <span className="dot">·</span> {text.length.toLocaleString()} / 24,000 characters</span><button className="primary" disabled={submitting||!selected}>{submitting?'Submitting…':rewriteSource?'Submit linked rewrite':'Submit writing'} <span aria-hidden="true">→</span></button></div><small>Your original submission is preserved. A score appears only after approved finalization.</small></form><aside className="card writing-tip"><span className="spark">✧</span><h3>Start with what<br/>you want to say.</h3><ol><li>Read the topic and clues.</li><li>Arrange your main ideas.</li><li>Write in your own words.</li><li>Read it once before submitting.</li></ol><p>There’s no perfect first draft. There is a thoughtful next step.</p></aside></section>:student&&view==='overview'?null:allowed?<section className="card assessments"><div className="section-heading"><div><span className="eyebrow">{me.role==='PARENT'?'FAMILY ASSESSMENTS':academic?'ASSIGNED COHORT':'YOUR WRITING'}</span><h2>{academic?'Cohort assessments':me.role==='PARENT'?'Their work, thoughtfully reviewed':'Your writing journey'}</h2></div><button className="secondary" disabled={loading} onClick={()=>listing(me,batch)}>Refresh</button></div>
-    {academic&&<label className="cohort-select">Choose a cohort<select value={batch} onChange={e=>{setBatch(e.target.value);void listing(me,e.target.value);void loadReviewQueue(e.target.value);}}><option value="">Choose your assigned cohort</option>{cohorts.map(c=><option key={c.id} value={c.id}>{c.programName} · {c.name}</option>)}</select></label>}
+    {academic&&<label className="cohort-select">Choose a cohort<select value={batch} onChange={e=>{setBatch(e.target.value);void listing(me,e.target.value);void loadReviewQueue(e.target.value);void loadCohortAnalytics(e.target.value);}}><option value="">Choose your assigned cohort</option>{cohorts.map(c=><option key={c.id} value={c.id}>{c.programName} · {c.name}</option>)}</select></label>}
+     {academic&&<CohortAnalytics data={cohortAnalytics} loading={analyticsLoading} onRefresh={()=>void loadCohortAnalytics(batch)}/>}
      {academic&&<section className="review-queue" aria-label="Human review queue"><div className="section-heading"><div><span className="eyebrow">CURRENT AUTHORIZED REVIEWS</span><h2>Human review queue</h2></div><button className="secondary" disabled={!batch} onClick={()=>loadReviewQueue(batch)}>Refresh queue</button></div>
       {!reviewCases.length?<p className="empty">No open review cases in this assigned cohort.</p>:<div className="records">{reviewCases.map(item=><article className="record" key={item.caseId}><div className="paper-icon" aria-hidden="true">↺</div><div className="record-main"><h3>{item.topicTitle}</h3><p>{item.kind.replaceAll('_',' ').toLowerCase()} · Assessment {item.assessmentId.slice(0,8)}</p><span className="pill pending">{item.status.toLowerCase()}</span></div><button className="secondary" onClick={()=>openReviewCase(item.caseId)}>Review case</button></article>)}</div>}
       {reviewCase&&<article className="review-detail" aria-live="polite"><div className="section-heading"><div><span className="eyebrow">{reviewCase.kind.replaceAll('_',' ')}</span><h3>Case {reviewCase.caseId.slice(0,8)}</h3></div><button className="text-button" onClick={()=>{client.current.capture('review-case');setReviewCase(null);}}>Close</button></div>

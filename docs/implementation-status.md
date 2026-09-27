@@ -30,6 +30,10 @@ On 2026-09-27, the release review found no evidence to close the independent pro
 
 Upgrades `@nestjs/common`, `@nestjs/core`, and `@nestjs/platform-express` to 11.2.6, `@nestjs/jwt` to 11.0.2, and moves the HTTP adapter from Express 4 to Express 5. The lock resolves patched `multer` 2.4.0, `qs` 6.16.0, `file-type` 21.3.4, and `body-parser` 2.3.0. On the clean locked install, `npm audit --audit-level=high` reports zero vulnerabilities. Local domain/policy/static/assessment tests, web tests/typecheck, API/worker typechecks, Prisma generation, and API build pass; exact-head and post-merge CI provide PostgreSQL and browser-flow coverage. The root `deepmerge-ts` 8.0.0 override still lies outside Prisma config’s declared 7.1.5 version; retain compatibility coverage and remove the override once upstream aligns. Production remains NO-GO.
 
+### Step 106 — Teacher cohort analytics view (development)
+
+Adds a staff-only responsive summary over the existing authorized analytics endpoint. Current results remain separated by immutable rubric version; the portal shows finalized coverage, represented learners, mean/range, and pending/unavailable counts without learner or assessment identifiers. The endpoint remains the authority for current assignment, enrollment, processing authority, and canonical revisions. This is assessment-weighted descriptive data, not growth or mastery. Small-cohort suppression and production approvals remain open. See [Step106 details](step106-cohort-analytics-ui.md).
+
 ## Source organization
 
 - `docs/master-blueprint-v2.md`: retained original corrected audit (Step 71 checkpoint).
