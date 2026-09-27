@@ -56,7 +56,7 @@ async function create(){
   await admin.bindRubric(rootActor,rubric.id);
   const other=await new SubmissionService(db).createTyped(actor(otherUser),{programId:program.id,batchId:otherBatch.id,
     topicVersionId:otherTopic.id,clientRequestId:randomUUID(),text:'A garden has many trees and flowers.'});
-  return {password,studentEmail:studentUser.email,parentEmail:parent.email,teacherEmail:teacher.email,
+  return {password,studentEmail:studentUser.email,parentEmail:parent.email,teacherEmail:teacher.email,reviewerEmail:reviewer.email,
     studentUserId:studentUser.id,studentId:student.id,parentId:parent.id,teacherId:teacher.id,reviewerId:reviewer.id,
     rootId:root.id,linkId:link.id,assignmentId:assignment.id,batchId:batch.id,otherBatchId:otherBatch.id,
     topicId:topic.id,otherStudentId:otherStudent.id,otherAssessmentId:other.assessmentId};
