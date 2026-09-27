@@ -34,6 +34,10 @@ test('parent sees linked assessments with pagination and current PDF download',a
 });
 test('teacher discovers assigned cohorts without entering private identifiers',async({page},info)=>{
  await login(page,'teacher');await expect(page.getByLabel('Choose a cohort')).toHaveValue('44444444-4444-4444-8444-444444444444');
+ await expect(page.getByRole('heading',{name:'Assessment summary'})).toBeVisible();
+ await expect(page.getByText('7.5 / 10',{exact:true})).toBeVisible();
+ await expect(page.getByText('2 of 3 finalized',{exact:true})).toBeVisible();
+ await expect(page.getByText(/rubric versions are reported separately/)).toBeVisible();
  await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
  await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();
  await page.screenshot({path:info.outputPath('teacher-dashboard.png'),fullPage:true});
