@@ -261,6 +261,9 @@ model Submission {
   topicVersionId String @db.Uuid
   rubricVersionId String @db.Uuid
   clientRequestId String @db.Uuid
+  rewriteOfAssessmentId String? @db.Uuid
+  rewriteOfRevisionId String? @db.Uuid
+  correctionNote String? @db.VarChar(2000)
   topicSnapshot Json
   rubricSnapshot Json
   topicHash      String @db.VarChar(64)
@@ -274,8 +277,10 @@ model Submission {
   rubric         RubricVersion @relation(fields: [rubricVersionId], references: [id], onDelete: Restrict)
   verifiedText   VerifiedWritingText?
   assessment     Assessment?
+  rewriteOfRevision AssessmentScoreRevision? @relation("RewriteRevision", fields: [rewriteOfRevisionId, rewriteOfAssessmentId], references: [id, assessmentId], onDelete: Restrict)
   @@unique([studentId, clientRequestId], map: "Submission_student_request_unique")
   @@index([studentId, programId, createdAt])
+  @@index([rewriteOfAssessmentId, rewriteOfRevisionId])
 }
 model VerifiedWritingText {
   id           String @id @default(uuid()) @db.Uuid
@@ -454,6 +459,8 @@ model AssessmentScoreRevision {
   practiceUses PracticeProjection[]
   progressUses ProgressProjection[]
   reportUses ReportSnapshot[]
+  rewrites Submission[] @relation("RewriteRevision")
+  @@unique([id, assessmentId], map: "AssessmentScoreRevision_rewrite_reference_unique")
   @@unique([examinerRunId])
 }
 

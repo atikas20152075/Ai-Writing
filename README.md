@@ -1,10 +1,11 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 93 (Next.js role portals and private authentication gateway). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 94 (PFCR learning view and linked rewrite workflow). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
 - [Current Next.js portal, setup and authentication boundary](docs/step93-nextjs-portal.md)
+- [Step 94 PFCR linked rewrite workflow](docs/step94-pfcr-linked-rewrites.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
@@ -64,3 +65,7 @@ Actual deterministic **rubric feedback**, **practice rewrite targets** and **sam
 ## Step 92 — Scoped cohort dashboard and English-only printable score report
 
 A backend-only authenticated teacher/cohort read endpoint uses current assignment, enrollment and educational processing scope; it does not provide global SUPER_ADMIN access or return raw child essays. Approved ENGLISH scores can be exported on demand as actual minimal PDF bytes only after current student/guardian/teacher/program scope rechecks in one transaction. Immutable as-of report snapshots and audit entries pin the canonical revision. Unsupported Bengali/mixed-script PDF remains explicitly unavailable pending approved Unicode typography and visual validation. See [Step92 engineering limits](docs/step92-teacher-reports.md). No UI deployment or private S3 archival is claimed.
+
+## Step 94 — PFCR learning view and linked rewrite workflow
+
+Students can now open approved learning material, see revision-pinned rubric feedback/practice targets/progress, write a correction plan and submit a new linked rewrite against the same current approved revision. The backend persists the link and correction note, rechecks student scope/current enrollment/published topic/current source revision, and the database trigger blocks stale or cross-student rewrite links. See [Step94 scope](docs/step94-pfcr-linked-rewrites.md). This remains synthetic development work: no live AI, OCR, real child data, production deployment or expert-approved grading is configured.

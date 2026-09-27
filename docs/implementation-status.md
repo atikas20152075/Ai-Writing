@@ -1,6 +1,6 @@
 # Engineering status and evidence — AI Writing Assessment Platform
 
-**Date:** 2026-09-26. This document must be updated only from actual commits and reproducible test evidence.
+**Date:** 2026-09-27. This document must be updated only from actual commits and reproducible test evidence.
 
 ## Development snapshots
 
@@ -65,3 +65,7 @@ The [Next.js implementation](step93-nextjs-portal.md) replaces the web placehold
 # Step93 full-stack browser continuation — 2026-09-27
 
 PR #15 adds desktop/mobile browser checks through the actual Next.js gateway, NestJS and disposable PostgreSQL. Initial run 36291381408 passed all three CI jobs, including four new full-stack scenarios and the existing twelve synthetic-upstream browser scenarios. See `docs/step93-fullstack-browser.md` for tested privacy/session boundaries, fixture limitations and final-head verification requirements. Next development checkpoint: current-revision PFCR learning views and linked rewrites. Production deployment and real AI grading remain off.
+
+## Step94 — PFCR learning UI and linked rewrites
+
+Students can now view revision-pinned rubric feedback, practice targets and same-rubric progress beside an approved result, then create a correction plan and submit a new linked rewrite. The backend persists the rewrite link to the exact effective score revision and blocks stale, cross-student or scope-changed links at both service and database-trigger layers. Local verification passed Prisma generation, API/web typechecks, API/web builds, web unit tests and browser fixture compilation. Local Playwright was blocked by the missing scratch Chromium binary; final browser/PostgreSQL evidence must come from GitHub CI for the Step94 PR. See [Step94 details](step94-pfcr-linked-rewrites.md).
