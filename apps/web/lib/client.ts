@@ -46,8 +46,8 @@ export type Learning={assessmentId:string;assessmentStatus:string;effectiveRevis
   progress:null|{schemaVersion:string;revisionId:string;status:string;comparableCount:number;scoreDelta:string|null;disclaimer:string;displayedPoints:{assessmentId:string;score:string;totalMarks:string;createdAt:string}[]}}};
 export type Cohort={id:string;name:string;programName:string};
 export type CohortAnalytics={batchId:string;programId:string;scope:'CURRENT_AUTHORIZED_ENROLLMENT';asOf:string;disclaimer:string;
- groups:{rubricVersionId:string;rubricVersion:number;writingType:string;language:string;assessmentCount:number;finalizedCount:number;representedLearnerCount:number;notFinalizedCount:number;
-  unavailableResultCount:number;totalMarks:string|null;meanScore:string|null;minimumScore:string|null;maximumScore:string|null}[]};
+ groups:{rubricVersionId:string;rubricVersion:number;writingType:string;language:string;suppressed:boolean;assessmentCount:number|null;finalizedCount:number|null;representedLearnerCount:number|null;notFinalizedCount:number|null;
+  unavailableResultCount:number|null;totalMarks:string|null;meanScore:string|null;minimumScore:string|null;maximumScore:string|null}[]};
 export type ReviewCase={caseId:string;assessmentId:string;batchId:string;topicTitle:string;status:string;kind:string;createdAt:string};
 export type ReviewCaseDetail={caseId:string;assessmentId:string;kind:string;status:string;openedAt:string;reason?:string;
  priorRevisionId:string|null;effectiveRevisionId:string|null;topic:{title:string;instructions:string;clues:string[]};

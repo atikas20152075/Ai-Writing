@@ -4,6 +4,7 @@ import {ForbiddenException,Inject,Injectable,NotFoundException} from '@nestjs/co
 import {Prisma} from '@prisma/client';
 import {PrismaService} from '../prisma/prisma.service.ts';
 import type {Actor} from '../auth/jwt.guard.ts';
+const COHORT_ANALYTICS_MIN_FINALIZED_LEARNERS=5;
 interface TeacherRow{
  assessmentId:string;studentId:string;rubricVersionId:string;topicTitle:string;
  status:string;revisionId:string|null;revisionNo:number|null;
@@ -127,14 +128,21 @@ export class TeacherDashboardService{
     GROUP BY s."rubricVersionId",v.version,v."writingType",v.language ORDER BY s."rubricVersionId"`;
    return {batchId:authorized.batchId,programId:authorized.programId,scope:'CURRENT_AUTHORIZED_ENROLLMENT',
     asOf:authorized.asOf.toISOString(),
-    disclaimer:'Descriptive, assessment-weighted current results. Repeated assessments count separately; rubric versions are reported separately and are not comparable across groups.',
-    groups:rows.map(x=>({rubricVersionId:x.rubricVersionId,rubricVersion:x.rubricVersion,
-     writingType:x.writingType,language:x.language,
-     assessmentCount:Number(x.assessmentCount),finalizedCount:Number(x.finalizedCount),
-     representedLearnerCount:Number(x.representedLearnerCount),notFinalizedCount:Number(x.notFinalizedCount),
-     unavailableResultCount:Number(x.unavailableResultCount),
-     totalMarks:x.totalMarks?.toString()??null,meanScore:x.meanScore?.toString()??null,
-     minimumScore:x.minimumScore?.toString()??null,maximumScore:x.maximumScore?.toString()??null}))};
+    disclaimer:'Descriptive, assessment-weighted current results. Repeated assessments count separately; rubric versions are reported separately and are not comparable across groups. Groups with fewer than five represented learners are withheld for privacy.',
+    groups:rows.map(x=>{
+     const suppressed=Number(x.representedLearnerCount)<COHORT_ANALYTICS_MIN_FINALIZED_LEARNERS;
+     return {rubricVersionId:x.rubricVersionId,rubricVersion:x.rubricVersion,
+      writingType:x.writingType,language:x.language,suppressed,
+      assessmentCount:suppressed?null:Number(x.assessmentCount),
+      finalizedCount:suppressed?null:Number(x.finalizedCount),
+      representedLearnerCount:suppressed?null:Number(x.representedLearnerCount),
+      notFinalizedCount:suppressed?null:Number(x.notFinalizedCount),
+      unavailableResultCount:suppressed?null:Number(x.unavailableResultCount),
+      totalMarks:suppressed?null:x.totalMarks?.toString()??null,
+      meanScore:suppressed?null:x.meanScore?.toString()??null,
+      minimumScore:suppressed?null:x.minimumScore?.toString()??null,
+      maximumScore:suppressed?null:x.maximumScore?.toString()??null};
+    })};
   },{isolationLevel:Prisma.TransactionIsolationLevel.RepeatableRead,timeout:10000});
  }
 }

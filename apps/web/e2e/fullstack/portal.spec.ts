@@ -101,8 +101,12 @@ test('real submission, independent human approval, linked-family privacy and liv
   await expect(page.getByLabel('Choose a cohort')).toHaveValue(f.batchId);
   await expect(page.getByRole('heading',{name:'Assessment summary'})).toBeVisible();
   await expect(page.getByText('English paragraph · Rubric v1',{exact:true})).toBeVisible();
-  await expect(page.getByRole('region',{name:'Cohort score summary'}).getByText('2 / 4',{exact:true})).toBeVisible();
-  await expect(page.getByText('1 of 1 finalized',{exact:true})).toBeVisible();
+  await expect(page.getByText('Summary withheld for privacy because fewer than five learners are represented.')).toBeVisible();
+  const smallCohortAnalytics=await get(page,`academic/cohorts/${f.batchId}/analytics`);
+  expect(smallCohortAnalytics.status).toBe(200);
+  expect(smallCohortAnalytics.body.groups[0]).toMatchObject({suppressed:true,assessmentCount:null,finalizedCount:null,
+    representedLearnerCount:null,notFinalizedCount:null,unavailableResultCount:null,totalMarks:null,meanScore:null,
+    minimumScore:null,maximumScore:null});
   await expect(page.getByText('Books and new ideas',{exact:true})).toBeVisible();
   expect((await get(page,`academic/cohorts/${f.otherBatchId}/assessments`)).status).toBe(404);
   await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();

@@ -38,6 +38,10 @@ Adds a staff-only responsive summary over the existing authorized analytics endp
 
 Extends each authorized cohort analytics group with its immutable rubric version number, writing type and language. The teacher view labels groups in readable form (for example, English paragraph · Rubric v1) while keeping versions separate and omitting learner/assessment identifiers. Scoring and authorization behavior are unchanged. See [Step107 details](step107-rubric-group-labels.md).
 
+### Step 108 — Small-cohort analytics suppression (development)
+
+The authorized analytics response now withholds every numeric count and score for an immutable-rubric group with fewer than five distinct learners represented by finalized current results. The staff portal shows a privacy notice instead of suppressed values. PostgreSQL coverage verifies suppression below the threshold, visible aggregates at five learners, and refreshed results after a score revision; desktop/mobile browser checks cover both privacy states. This minimum group size does not stop every inference across overlapping groups or repeated releases, and it does not close production privacy/legal approval. See [Step108 details](step108-small-cohort-suppression.md).
+
 ## Source organization
 
 - `docs/master-blueprint-v2.md`: retained original corrected audit (Step 71 checkpoint).

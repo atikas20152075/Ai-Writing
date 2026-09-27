@@ -449,7 +449,7 @@ test('Step93 cohort discovery returns only active assigned batches and rejects g
  });
 });
 
-test('Step98 cohort analytics stays current, authorization scoped, and separated by immutable rubric',{skip:!enabled},async()=>{
+test('Step108 cohort analytics suppresses small groups and stays current, scoped, and rubric separated',{skip:!enabled},async()=>{
  await rollbackCase(async tx=>{
   const f=await finalized(tx);
   const original=await tx.submission.findUniqueOrThrow({where:{id:f.assessment.submissionId}});
@@ -471,6 +471,31 @@ test('Step98 cohort analytics stays current, authorization scoped, and separated
    topicHash:original.topicHash,rubricHash:hash(canonicalJson(rubric2))}});
   await tx.assessment.create({data:{submissionId:submission2.id}});
 
+  // Raise the original-rubric group to exactly five distinct finalized learners.
+  for(let i=0;i<4;i++){
+   const user=await tx.user.create({data:{email:`analytics-peer-${i}-${randomUUID()}@example.test`,role:'STUDENT',passwordHash:'SYNTHETIC'}});
+   const student=await tx.student.create({data:{userId:user.id}});
+   await tx.enrollment.create({data:{studentId:student.id,programId:original.programId,batchId:original.batchId}});
+   await tx.processingAuthority.create({data:{studentId:student.id,programId:original.programId,purpose:'CORE_ASSESSMENT',
+    legalBasis:'SYNTHETIC_ONLY',policyVersion:'step108',approvedById:f.a.id}});
+   const peerSubmission=await tx.submission.create({data:{studentId:student.id,programId:original.programId,
+    batchId:original.batchId,topicVersionId:original.topicVersionId,rubricVersionId:original.rubricVersionId,
+    clientRequestId:randomUUID(),topicSnapshot:original.topicSnapshot,rubricSnapshot:original.rubricSnapshot,
+    topicHash:original.topicHash,rubricHash:original.rubricHash}});
+   const text='I like books.';
+   await tx.verifiedWritingText.create({data:{submissionId:peerSubmission.id,language:'ENGLISH',content:text,
+    contentHash:hash(text),verifiedById:user.id}});
+   const peerAssessment=await tx.assessment.create({data:{submissionId:peerSubmission.id}});
+   const assessmentSvc=new AssessmentPersistenceService({$transaction:async(cb:any)=>cb(tx)} as any);
+   await assessmentSvc.publishHumanUnderstanding({assessmentId:peerAssessment.id,reviewerId:f.a.id,
+    observations:[{category:'IDEA',finding:'Synthetic human-reviewed observation.',
+     evidence:{startOffset:7,endOffset:12,exactQuote:'books',claim:'Student mentions books'}}]});
+   await tx.assessment.update({where:{id:peerAssessment.id},data:{status:'HUMAN_REVIEW'}});
+   const peerCase=await f.reviews.open(actor(f.a),peerAssessment.id,reason);
+   await f.reviews.propose(actor(f.a),peerCase.caseId,factors('c2','2'),reason);
+   await f.reviews.decide(actor(f.b),peerCase.caseId,'APPROVE',reason);
+  }
+
   const first=await dashboard.analytics(actor(teacher),original.batchId);
   assert.equal(first.groups.length,2);
   const v1=first.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!;
@@ -479,15 +504,22 @@ test('Step98 cohort analytics stays current, authorization scoped, and separated
    {rubricVersion:1,writingType:'PARAGRAPH',language:'ENGLISH'});
   assert.deepEqual({rubricVersion:v2.rubricVersion,writingType:v2.writingType,language:v2.language},
    {rubricVersion:2,writingType:'PARAGRAPH',language:'ENGLISH'});
-  assert.equal(v1.meanScore,'2');assert.equal(v1.finalizedCount,1);assert.equal(v1.notFinalizedCount,0);
-  assert.equal(v2.meanScore,null);assert.equal(v2.finalizedCount,0);assert.equal(v2.notFinalizedCount,1);
+  assert.equal(v1.suppressed,false);assert.equal(v1.assessmentCount,5);assert.equal(v1.finalizedCount,5);
+  assert.equal(v1.representedLearnerCount,5);assert.equal(v1.meanScore,'2');assert.equal(v1.minimumScore,'2');
+  assert.equal(v1.maximumScore,'2');
+  assert.equal(v2.suppressed,true);
+  assert.equal(v2.assessmentCount,null);assert.equal(v2.finalizedCount,null);
+  assert.equal(v2.representedLearnerCount,null);assert.equal(v2.notFinalizedCount,null);
+  assert.equal(v2.unavailableResultCount,null);assert.equal(v2.totalMarks,null);
+  assert.equal(v2.meanScore,null);assert.equal(v2.minimumScore,null);assert.equal(v2.maximumScore,null);
   assert.equal('studentId' in v1,false);assert.equal('assessmentId' in v1,false);
 
   const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
   await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
   await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
   const updated=await dashboard.analytics(actor(teacher),original.batchId);
-  assert.equal(updated.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!.meanScore,'4');
+  const updatedV1=updated.groups.find((x:any)=>x.rubricVersionId===original.rubricVersionId)!;
+  assert.equal(updatedV1.suppressed,false);assert.equal(updatedV1.meanScore,'2.4');
   await tx.teacherBatch.update({where:{id:assignment.id},data:{endedAt:new Date()}});
   await assert.rejects(dashboard.analytics(actor(teacher),original.batchId),/Not Found|NotFound/i);
   await assert.rejects(dashboard.analytics(actor(f.user),original.batchId),/Forbidden/i);
