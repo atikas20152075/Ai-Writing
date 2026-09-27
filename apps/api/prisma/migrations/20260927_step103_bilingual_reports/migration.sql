@@ -42,7 +42,21 @@ BEGIN
    (NEW.snapshot->>'totalScore')::numeric IS DISTINCT FROM score."totalScore" OR
    (NEW.snapshot->>'totalMarks')::numeric IS DISTINCT FROM score."totalMarks" OR
    jsonb_array_length(NEW.snapshot->'factorResults') IS DISTINCT FROM jsonb_array_length(score."factorResults") OR
-   NOT(score."factorResults" @> (NEW.snapshot->'factorResults'))
+   EXISTS(
+     SELECT 1 FROM jsonb_array_elements(NEW.snapshot->'factorResults') AS rf(value)
+     WHERE NOT EXISTS(
+       SELECT 1 FROM jsonb_array_elements(score."factorResults") AS af(value)
+       WHERE af.value->>'factorId'=rf.value->>'factorId'
+         AND af.value->>'criterionId'=rf.value->>'criterionId'
+         AND af.value->>'proposedScore'=rf.value->>'proposedScore'
+         AND af.value->>'rationale'=rf.value->>'rationale'
+         AND (SELECT array_agg(ev.value->>'exactQuote' ORDER BY ev.ordinality)
+              FROM jsonb_array_elements(af.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
+             IS NOT DISTINCT FROM
+             (SELECT array_agg(ev.value->>'exactQuote' ORDER BY ev.ordinality)
+              FROM jsonb_array_elements(rf.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
+     )
+   )
  THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL'; END IF;
  RETURN NEW;
 END $$;
