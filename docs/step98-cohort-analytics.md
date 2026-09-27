@@ -1,6 +1,6 @@
 # Step 98 — Cohort analytics
 
-**Status:** implementation complete; waiting for verification and CI.
+**Status:** PR #21 merged to `main` as `9ecf40efef43a287fd3a14f106b7be4e38bfd646`. Exact-head CI run [36329851220](https://github.com/atikas20152075/Ai-Writing/actions/runs/36329851220) passed all three jobs, including disposable PostgreSQL integration and desktop/mobile full-stack browser tests.
 
 ## Scope delivered
 
@@ -12,7 +12,7 @@
 
 ## Verification
 
-Synthetic PostgreSQL integration coverage checks distinct rubric versions, pending result behavior, use of the current effective revision after a human correction, and loss of access after assignment revocation. The web gateway test checks the exact allowed route shape. Run API/web typechecks, builds, unit tests, the opt-in PostgreSQL suite, and CI before merge.
+Passed locally: API typecheck, API policy typecheck, API build, web typecheck, all 8 web unit tests, web production build, browser-fixture TypeScript check, root `npm test` (106 checks), and `git diff --check`. The local opt-in PostgreSQL command could not start because `tsx` was denied its IPC socket (`listen EPERM`); the exact-head CI run passed the database-backed tests and the real Next.js/NestJS/PostgreSQL desktop/mobile browser suite.
 
 ## Limits and next task
 

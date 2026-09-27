@@ -7,6 +7,7 @@
 - Added an authorized, read-only cohort analytics endpoint with current effective finalized revisions, descriptive score aggregates, and counts of pending assessments.
 - Analytics are separated by immutable rubric version, count repeated assessments individually, omit learner and assessment identifiers, and return no-store responses.
 - Added synthetic PostgreSQL coverage for rubric separation, pending-result handling, current-revision changes, and authorization revocation.
+- PR #21 merged; exact-head CI run [36329851220](https://github.com/atikas20152075/Ai-Writing/actions/runs/36329851220) passed all three jobs.
 - Next task: Step 99 — Production Hardening.
 
 ### Step 97 — Student dashboard
