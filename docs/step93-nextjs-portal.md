@@ -39,3 +39,12 @@ Open `http://localhost:3000`. `NEXT_TELEMETRY_DISABLED=1 npm --workspace apps/we
 ## Remaining release work
 
 Bilingual font-embedded accessible PDFs; private report object lifecycle; human-review UI; full PFCR linked rewrite and learning views; handwriting/OCR; production identity/guardian verification and retention/deletion; independent academic/privacy/security sign-off; staging/recovery/load tests. None is implied by this frontend milestone. Production and real AI processing remain off.
+
+
+## Verified continuation checkpoint — 2026-09-27
+
+PR #14 implements this continuation after merged PR #13. Initial full CI on `eae231a8a38de96a28ebf7403faf0c4ac0a2f109` passed both backend and web jobs: [run 36290606571](https://github.com/atikas20152075/Ai-Writing/actions/runs/36290606571). That includes the actual PostgreSQL integration suite, synthetic HTTP/Python suites, eight gateway tests, optimized Next.js build and **12 real Chromium browser tests** across desktop/mobile. Final PR-head CI must still be consulted after any further code update.
+
+Local Chromium 153 also passed all 12 browser scenarios. Desktop editor and mobile parent-result screenshots were visually inspected: responsive layout, readable factor evidence, no horizontal overflow in the tested teacher view. Initial browser-launch failures came from the local graphics stack; the optional local executable configuration now disables GPU paths without disabling browser web security. The standard CI browser uses Playwright defaults.
+
+Next development gate: full-stack browser tests through real NestJS/PostgreSQL, then current-revision learning/PFCR interfaces. This milestone does not close the remaining release work above.

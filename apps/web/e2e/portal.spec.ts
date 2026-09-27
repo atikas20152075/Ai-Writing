@@ -11,7 +11,7 @@ test('student signs in, submits original writing, sees pending and approved resu
  await page.getByRole('button',{name:'View result'}).last().click();await expect(page.getByText('No finalized score is available yet.')).toBeVisible();
  await page.getByRole('button',{name:'View result'}).first().click();await expect(page.getByText('Synthetic approved fixture:',{exact:false})).toBeVisible();
  await page.screenshot({path:info.outputPath('student-result.png'),fullPage:true});
- await page.getByRole('button',{name:'New writing',exact:true}).click();await page.getByLabel('Choose your topic').selectOption({index:1});
+ await page.getByRole('button',{name:'New writing',exact:true}).click();await expect(page.getByRole('heading',{name:'Your approved result'})).toHaveCount(0);await page.getByLabel('Choose your topic').selectOption({index:1});
  await expect(page.getByText('Your favourite book',{exact:true})).toBeVisible();await page.getByLabel('Your writing',{exact:true}).fill('I enjoy reading. Books help me discover new places and ideas.');
  await page.screenshot({path:info.outputPath('writing-editor.png'),fullPage:true});
  await page.getByRole('button',{name:'Submit writing'}).click();await expect(page.getByRole('status')).toContainText('Your writing was submitted.');
