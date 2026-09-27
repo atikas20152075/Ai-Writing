@@ -117,7 +117,7 @@ test('approved feedback guides a durable linked rewrite; stale and cross-child s
   await page.getByRole('button',{name:'Refresh',exact:true}).click();
   await page.getByRole('button',{name:'View result'}).click();
   await expect(page.getByRole('heading',{name:'Your next thoughtful draft'})).toBeVisible();
-  await expect(page.getByText('Partial',{exact:true})).toBeVisible();
+  await expect(page.getByText('Published criterion:')).toBeVisible();
   await expect(page.getByText('Revise your writing with attention to Content.')).toBeVisible();
   await expect(page.getByText('A second approved assessment using the same rubric is needed')).toBeVisible();
   await page.getByRole('button',{name:'Plan a linked rewrite'}).click();
