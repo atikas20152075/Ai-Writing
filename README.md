@@ -73,7 +73,7 @@ Students can now open approved learning material, see revision-pinned rubric fee
 
 ## Step 98 — Cohort analytics
 
-The teacher and scoped academic-administrator API reports descriptive cohort aggregates from current authorized enrollment and current effective finalized score revisions. Each immutable rubric version is kept in its own group; repeated assessments count separately, and groups contain no learner or assessment identifiers. The endpoint is read-only and private/no-store. Synthetic PostgreSQL coverage checks revision changes, rubric separation, pending assessments, and revoked access. See [Step98 scope and limits](docs/step98-cohort-analytics.md). Next task: Step 99 — Production Hardening.
+The teacher and scoped academic-administrator API reports descriptive cohort aggregates from current authorized enrollment and current effective finalized score revisions. Each immutable rubric version is kept in its own group; repeated assessments count separately, and groups contain no learner or assessment identifiers. The endpoint is read-only and private/no-store. PR #21 is merged, and exact-head CI [36329851220](https://github.com/atikas20152075/Ai-Writing/actions/runs/36329851220) passed all three jobs. See [Step98 scope and limits](docs/step98-cohort-analytics.md). Next task: Step 99 — Production Hardening.
 
 ## Step 97 — Student dashboard
 
