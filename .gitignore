@@ -11,3 +11,6 @@ coverage/
 dist/
 reports/
 *.log
+*.tsbuildinfo
+test-results/
+playwright-report/

@@ -86,3 +86,33 @@ jobs:
         run: |
           python -m pip install -e 'apps/ai-service[test]'
           (cd apps/ai-service && python -m pytest -q)
+  web-portal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Authentication boundary tests
+        run: npm --workspace apps/web test
+      - name: Production build and typecheck
+        run: |
+          npm --workspace apps/web run build
+          npm --workspace apps/web run typecheck
+      - name: Install Chromium for actual browser tests
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile browser workflows against synthetic upstream
+        run: npm --workspace apps/web run test:e2e
+      - name: Preserve synthetic browser screenshots and failure traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step93-browser-evidence
+          path: apps/web/test-results
+          retention-days: 7

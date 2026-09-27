@@ -13,6 +13,20 @@ interface TeacherRow{
 @Injectable()
 export class TeacherDashboardService{
  constructor(@Inject(PrismaService)private readonly db:PrismaService){}
+ async mine(actor:Actor){
+  if(actor.role!=='TEACHER'&&actor.role!=='ACADEMIC_ADMIN')throw new ForbiddenException();
+  const rows=await this.db.$queryRaw<Array<{id:string;name:string;programName:string}>>`
+   SELECT b.id,b.name,p.name AS "programName" FROM "Batch" b
+    JOIN "AcademicProgram" p ON p.id=b."programId" AND p.status='ACTIVE'
+    JOIN "User" u ON u.id=${actor.userId}::uuid AND u.status='ACTIVE' AND u.role::text=${actor.role}
+   WHERE b.active=true AND (
+    (u.role='TEACHER' AND EXISTS(SELECT 1 FROM "TeacherBatch" t WHERE t."teacherId"=u.id
+      AND t."batchId"=b.id AND t."assignedAt"<=statement_timestamp() AND t."endedAt" IS NULL)) OR
+    (u.role='ACADEMIC_ADMIN' AND EXISTS(SELECT 1 FROM "AcademicAdminProgram" a WHERE a."userId"=u.id
+      AND a."programId"=p.id AND a."assignedAt"<=statement_timestamp() AND a."endedAt" IS NULL)))
+   ORDER BY p.name,b.name,b.id LIMIT 101`;
+  return {cohorts:rows.slice(0,100),truncated:rows.length>100};
+ }
  async cohort(actor:Actor,batchId:string,cursor?:string){
   if(actor.role!=='TEACHER'&&actor.role!=='ACADEMIC_ADMIN')throw new ForbiddenException();
   if(cursor&&!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cursor))

@@ -1,8 +1,10 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 92 (human review, protected score revisions). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 93 (Next.js role portals and private authentication gateway). This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
+
+- [Current Next.js portal, setup and authentication boundary](docs/step93-nextjs-portal.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)
