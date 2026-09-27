@@ -57,7 +57,34 @@ BEGIN
               FROM jsonb_array_elements(rf.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
      )
    )
- THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL'; END IF;
+ THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL found=% language=% schema=% snapshot_language=% assessment=% revision=% rubric=% revision_no=% source=% topic=% total_score=% total_marks=% factor_count=% factors=%',
+   FOUND,score.language IS NOT DISTINCT FROM expected_language,
+   NEW.snapshot->>'schemaVersion' IS NOT DISTINCT FROM expected_schema,
+   NEW.snapshot->>'language' IS NOT DISTINCT FROM expected_language,
+   NEW.snapshot->>'assessmentId' IS NOT DISTINCT FROM NEW."assessmentId"::text,
+   NEW.snapshot->>'scoreRevisionId' IS NOT DISTINCT FROM NEW."scoreRevisionId"::text,
+   NEW.snapshot->>'rubricVersionId' IS NOT DISTINCT FROM score."rubricVersionId"::text,
+   NEW.snapshot->>'revisionNo' IS NOT DISTINCT FROM score."revisionNo"::text,
+   NEW.snapshot->>'source' IS NOT DISTINCT FROM score.source,
+   NEW.snapshot->>'topicTitle' IS NOT DISTINCT FROM score."topicSnapshot"->>'title',
+   (NEW.snapshot->>'totalScore')::numeric IS NOT DISTINCT FROM score."totalScore",
+   (NEW.snapshot->>'totalMarks')::numeric IS NOT DISTINCT FROM score."totalMarks",
+   jsonb_array_length(NEW.snapshot->'factorResults')=jsonb_array_length(score."factorResults"),
+   NOT EXISTS(
+     SELECT 1 FROM jsonb_array_elements(NEW.snapshot->'factorResults') AS rf(value)
+     WHERE NOT EXISTS(
+       SELECT 1 FROM jsonb_array_elements(score."factorResults") AS af(value)
+       WHERE af.value->>'factorId'=rf.value->>'factorId'
+         AND af.value->>'criterionId'=rf.value->>'criterionId'
+         AND af.value->>'proposedScore'=rf.value->>'proposedScore'
+         AND af.value->>'rationale'=rf.value->>'rationale'
+         AND (SELECT array_agg(ev.value->>'exactQuote' ORDER BY ev.ordinality)
+              FROM jsonb_array_elements(af.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
+             IS NOT DISTINCT FROM
+             (SELECT array_agg(ev.value->>'exactQuote' ORDER BY ev.ordinality)
+              FROM jsonb_array_elements(rf.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
+     )
+   ); END IF;
  RETURN NEW;
 END $$;
 CREATE OR REPLACE FUNCTION step90_guard_invalidation() RETURNS trigger LANGUAGE plpgsql AS $$
