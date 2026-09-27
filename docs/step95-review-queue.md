@@ -20,8 +20,9 @@
 - `npm --workspace apps/web run build`
 - `npx tsc -p apps/api/tsconfig.browser.json --pretty false`
 - `DATABASE_URL=postgresql://user:pass@localhost:5432/writing_test npx prisma validate --schema apps/api/prisma/schema.prisma`
+- GitHub Actions run [36312337443](https://github.com/atikas20152075/Ai-Writing/actions/runs/36312337443) passed `backend-integration`, `web-portal` and `web-fullstack`, including desktop and mobile against disposable PostgreSQL.
 
-Local browser execution still depends on an installed Playwright Chromium binary and disposable PostgreSQL. Until the full-stack browser CI passes on this change, the UI authorization path is not claimed as browser-verified.
+The local scratch environment lacks the full browser/PostgreSQL setup; the passing CI run is the end-to-end verification for this step. Fixtures use synthetic identities and disposable test data.
 
 ## Not Included
 
