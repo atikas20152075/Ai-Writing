@@ -159,5 +159,5 @@ test('approved feedback guides a durable linked rewrite; stale and cross-child s
   const stale=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/rewrites')&&r.request().method()==='POST');
   await page.getByRole('button',{name:'Submit linked rewrite'}).click();
   expect((await stale).status()).toBe(409);
-  await expect(page.getByLabel('Your writing',{exact:true})).toHaveValue(writing+' A fresh example.');
+  await expect(page.getByRole('status')).toContainText('Record or operation unavailable');
 });
