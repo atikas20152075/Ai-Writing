@@ -57,7 +57,7 @@ BEGIN
               FROM jsonb_array_elements(rf.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
      )
    )
- THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL found=% language=% schema=% snapshot_language=% assessment=% revision=% rubric=% revision_no=% source=% topic=% total_score=% total_marks=% factor_count=% factors=%',
+ THEN RAISE EXCEPTION 'STEP92_REPORT_NOT_CANONICAL found=% language=% schema=% snapshot_language=% assessment=% revision=% rubric=% revision_no=% source=% topic=% total_score=% total_marks=% factor_count=% factors=% snapshot_score=% source_score=% snapshot_factors=% source_factors=%',
    FOUND,score.language IS NOT DISTINCT FROM expected_language,
    NEW.snapshot->>'schemaVersion' IS NOT DISTINCT FROM expected_schema,
    NEW.snapshot->>'language' IS NOT DISTINCT FROM expected_language,
@@ -84,7 +84,8 @@ BEGIN
              (SELECT array_agg(ev.value->>'exactQuote' ORDER BY ev.ordinality)
               FROM jsonb_array_elements(rf.value->'evidence') WITH ORDINALITY AS ev(value,ordinality))
      )
-   ); END IF;
+   ),NEW.snapshot->>'totalScore',score."totalScore"::text,
+   NEW.snapshot->'factorResults',score."factorResults"; END IF;
  RETURN NEW;
 END $$;
 CREATE OR REPLACE FUNCTION step90_guard_invalidation() RETURNS trigger LANGUAGE plpgsql AS $$
