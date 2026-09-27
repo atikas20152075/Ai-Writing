@@ -5,6 +5,7 @@ const reads=[/^academic\/cohorts\/mine$/,/^auth\/me$/,/^submissions\/mine(?:\/wr
  /^parents\/me\/children\/assessments$/,
  new RegExp(`^parents/me/children/${uuid}/assessments/${uuid}/result$`),
  new RegExp(`^academic/cohorts/${uuid}/assessments$`),
+ new RegExp(`^academic/cohorts/${uuid}/analytics$`),
  /^review-cases$/,
  new RegExp(`^review-cases/${uuid}$`),
  new RegExp(`^reports/assessments/${uuid}/pdf$`)];

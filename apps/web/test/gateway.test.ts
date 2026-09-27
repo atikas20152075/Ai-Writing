@@ -19,6 +19,8 @@ test('BFF denies unknown routes, path traversal, writes, client identity injecti
  assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/proposals','POST'),env,blocked)).status,401);
  assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/decisions','POST'),env,blocked)).status,401);
  assert.equal((await gateway(request('review-cases/11111111-1111-4111-8111-111111111111/proposals/extra','POST'),env,noCall)).status,404);
+ assert.equal((await gateway(request('academic/cohorts/11111111-1111-4111-8111-111111111111/analytics'),env,blocked)).status,401);
+ assert.equal((await gateway(request('academic/cohorts/not-a-uuid/analytics'),env,noCall)).status,404);
  assert.equal((await gateway(request('auth/me','GET',{}, {'X-Writing-Client':''}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/login','POST',{}, {Origin:'https://attacker.example'}),env,noCall)).status,403);
  assert.equal((await gateway(request('auth/me','GET',{}, {'Sec-Fetch-Site':'same-site'}),env,noCall)).status,403);
