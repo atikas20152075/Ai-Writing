@@ -12,7 +12,7 @@
 
 ## Verification
 
-Passed locally: API typecheck, API policy typecheck, API build, web typecheck, all 8 web unit tests, web production build, browser-fixture TypeScript check, root `npm test` (89 checks), and `git diff --check`. The local opt-in PostgreSQL command could not start because `tsx` was denied its IPC socket (`listen EPERM`); the exact-head CI run passed the database-backed tests and the real Next.js/NestJS/PostgreSQL desktop/mobile browser suite.
+Passed locally: API typecheck, API policy typecheck, API build, web typecheck, all 8 web unit tests, web production build, browser-fixture TypeScript check, root `npm test` (106 checks), and `git diff --check`. The local opt-in PostgreSQL command could not start because `tsx` was denied its IPC socket (`listen EPERM`); the exact-head CI run passed the database-backed tests and the real Next.js/NestJS/PostgreSQL desktop/mobile browser suite.
 
 ## Limits and next task
 
