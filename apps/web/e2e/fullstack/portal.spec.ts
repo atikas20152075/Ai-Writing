@@ -161,3 +161,22 @@ test('approved feedback guides a durable linked rewrite; stale and cross-child s
   expect((await stale).status()).toBe(409);
   await expect(page.getByRole('status')).toContainText('Your writing context may have changed');
 });
+
+test('current assigned teacher can inspect a pending review case; unassigned batch and roles cannot enumerate it',async({page})=>{
+  const f=fixture('create');await login(page,f.studentEmail,f.password);
+  await page.getByRole('button',{name:'New writing',exact:true}).click();
+  await page.getByLabel('Choose your topic').selectOption({label:'Books and new ideas · ENGLISH · Linked learner cohort'});
+  await page.getByLabel('Your writing',{exact:true}).fill('I like books. Reading helps me discover new ideas.');
+  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/typed')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit writing'}).click();const record=await (await submitted).json();
+  const opened=fixture('open-review',{userId:f.studentUserId,assessmentId:record.assessmentId,teacherId:f.teacherId});await logout(page);
+  await login(page,f.teacherEmail,f.password);
+  await expect(page.getByRole('heading',{name:'Human review queue'})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Review case'})).toBeVisible();
+  await page.getByRole('button',{name:'Review case'}).click();
+  await expect(page.getByText('Synthetic browser fixture review; not an academic quality benchmark.')).toBeVisible();
+  expect((await page.evaluate(async path=>{const r=await fetch('/api/portal/'+path,{headers:{'X-Writing-Client':'portal'}});return r.status;},`academic/cohorts/${f.otherBatchId}/assessments`))).toBe(404);
+  await logout(page);await login(page,f.studentEmail,f.password);
+  expect((await page.evaluate(async path=>{const r=await fetch('/api/portal/'+path,{headers:{'X-Writing-Client':'portal'}});return r.status;},`review-cases?batchId=${f.batchId}`))).toBe(403);
+  expect((await page.evaluate(async id=>{const r=await fetch('/api/portal/review-cases/'+id,{headers:{'X-Writing-Client':'portal'}});return r.status;},opened.caseId))).toBe(200);
+});

@@ -69,3 +69,7 @@ PR #15 adds desktop/mobile browser checks through the actual Next.js gateway, Ne
 ## Step94 — PFCR learning UI and linked rewrites
 
 Students can now view revision-pinned rubric feedback, practice targets and same-rubric progress beside an approved result, then create a correction plan and submit a new linked rewrite. The backend persists the rewrite link to the exact effective score revision and blocks stale, cross-student or scope-changed links at both service and database-trigger layers. Local verification passed Prisma generation, API/web typechecks, API/web builds, web unit tests and browser fixture compilation. Local Playwright was blocked by the missing scratch Chromium binary; final browser/PostgreSQL evidence must come from GitHub CI for the Step94 PR. See [Step94 details](step94-pfcr-linked-rewrites.md).
+
+## Step95 — Authorized human-review queue
+
+Adds a read-only queue for OPEN/PROPOSED human review cases and reviewer-only case inspection. Every queue read rechecks current teacher-batch or academic-program grants, active enrollment and CORE_ASSESSMENT processing authority; the BFF accepts only a UUID batch filter and exact case-detail IDs. The portal exposes no score-writing action: immutable proposal/decision operations still require the existing scoped API and independent second reviewer. Local API/web typechecks and builds, portal unit tests, Prisma validation and full-stack fixture compilation pass. Browser/PostgreSQL E2E remains to be confirmed in CI; synthetic fixtures only. See [Step95 details](step95-review-queue.md).

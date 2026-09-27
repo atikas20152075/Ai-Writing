@@ -206,6 +206,9 @@ export class HumanReviewService {
     // Current grant and educational authority, even for already resolved historical cases.
     return this.db.$transaction(async tx=>{
       const {subject}=await this.subject(tx,c.assessmentId);
+      if(['OPEN','PROPOSED'].includes(c.status)&&
+        (c.priorRevisionId!==subject.effectiveScoreRevisionId||!['FINALIZED','HUMAN_REVIEW'].includes(subject.status)))
+        throw new NotFoundException();
       const user=await tx.user.findUnique({where:{id:actor.userId}});
       if(!user||user.status!=='ACTIVE')throw new NotFoundException();
       if(user.role==='STUDENT'&&subject.studentUserId===actor.userId){await this.requireCoreAuthority(tx,subject);
@@ -220,5 +223,32 @@ export class HumanReviewService {
       return {caseId:id,assessmentId:c.assessmentId,kind:c.kind,status:c.status,openedAt:c.createdAt,
         reason:c.reason,proposal};
     });
+  }
+
+  async queue(actor:Actor,batchId?:string){
+    if(!['TEACHER','ACADEMIC_ADMIN'].includes(actor.role))throw new ForbiddenException();
+    const rows=await this.db.$queryRaw<Array<{caseId:string;assessmentId:string;batchId:string;topicTitle:string;
+      status:string;kind:string;createdAt:Date}>>`
+      SELECT c.id AS "caseId",a.id AS "assessmentId",s."batchId",
+        s."topicSnapshot"->>'title' AS "topicTitle",c.status::text AS status,c.kind::text AS kind,c."createdAt"
+      FROM "HumanReviewCase" c
+      JOIN "Assessment" a ON a.id=c."assessmentId"
+      JOIN "Submission" s ON s.id=a."submissionId" AND s.status='ACCEPTED'
+      JOIN "User" u ON u.id=${actor.userId}::uuid AND u.status='ACTIVE' AND u.role::text=${actor.role}
+      WHERE c.status IN ('OPEN','PROPOSED')
+        AND ((c."priorRevisionId" IS NULL AND a.status='HUMAN_REVIEW') OR
+          (c."priorRevisionId"=a."effectiveScoreRevisionId" AND a.status='FINALIZED'))
+        AND (${batchId??null}::uuid IS NULL OR s."batchId"=${batchId??null}::uuid)
+        AND EXISTS(SELECT 1 FROM "Enrollment" e WHERE e."studentId"=s."studentId"
+          AND e."programId"=s."programId" AND e."batchId"=s."batchId" AND e.status='ACTIVE'
+          AND e."startedAt"<=statement_timestamp() AND e."endedAt" IS NULL)
+        AND EXISTS(SELECT 1 FROM "ProcessingAuthority" p WHERE p."studentId"=s."studentId"
+          AND p."programId"=s."programId" AND p.purpose='CORE_ASSESSMENT' AND p.status='ACTIVE' AND p."endedAt" IS NULL)
+        AND ((u.role='TEACHER' AND EXISTS(SELECT 1 FROM "TeacherBatch" t WHERE t."teacherId"=u.id
+              AND t."batchId"=s."batchId" AND t."assignedAt"<=statement_timestamp() AND t."endedAt" IS NULL))
+          OR (u.role='ACADEMIC_ADMIN' AND EXISTS(SELECT 1 FROM "AcademicAdminProgram" ap WHERE ap."userId"=u.id
+              AND ap."programId"=s."programId" AND ap."assignedAt"<=statement_timestamp() AND ap."endedAt" IS NULL)))
+      ORDER BY c."createdAt",c.id LIMIT 101`;
+    return {cases:rows.slice(0,100),truncated:rows.length>100};
   }
 }

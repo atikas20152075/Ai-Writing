@@ -5,6 +5,8 @@ const reads=[/^academic\/cohorts\/mine$/,/^auth\/me$/,/^submissions\/mine(?:\/wr
  /^parents\/me\/children\/assessments$/,
  new RegExp(`^parents/me/children/${uuid}/assessments/${uuid}/result$`),
  new RegExp(`^academic/cohorts/${uuid}/assessments$`),
+ /^review-cases$/,
+ new RegExp(`^review-cases/${uuid}$`),
  new RegExp(`^reports/assessments/${uuid}/pdf$`)];
 const cursorRoutes=[/^parents\/me\/children\/assessments$/,new RegExp(`^academic/cohorts/${uuid}/assessments$`)];
 const safeHeaders={'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff','Vary':'Cookie'};
@@ -60,7 +62,11 @@ export async function gateway(request:Request,env:Env=process.env,transport:type
     (request.headers.has('sec-fetch-site')&&request.headers.get('sec-fetch-site')!=='same-origin')||
     (method==='POST'&&request.headers.get('origin')!==cfg.origin))return json({error:'Origin rejected'},403);
   const query=[...url.searchParams];
-  if(query.length&&(query.length!==1||query[0][0]!=='cursor'||!cursorRoutes.some(x=>x.test(path))||!new RegExp(`^${uuid}$`).test(query[0][1])))return json({error:'Invalid query'},400);
+  if(query.length){
+   const validCursor=query.length===1&&query[0][0]==='cursor'&&cursorRoutes.some(x=>x.test(path))&&new RegExp(`^${uuid}$`).test(query[0][1]);
+   const validQueue=query.length===1&&query[0][0]==='batchId'&&path==='review-cases'&&new RegExp(`^${uuid}$`).test(query[0][1]);
+   if(!validCursor&&!validQueue)return json({error:'Invalid query'},400);
+  }
   let body:string|undefined;
   if(method==='POST'){
    if(request.headers.get('content-type')?.split(';')[0].trim()!=='application/json')return json({error:'JSON required'},415);
