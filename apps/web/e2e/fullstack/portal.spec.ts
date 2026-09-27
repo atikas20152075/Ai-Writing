@@ -194,8 +194,8 @@ test('authorized reviewers see the locked writing and factor evidence; correctio
   await page.getByRole('button',{name:'Review case'}).click();
   await expect(page.getByText('I like books. Reading helps me discover new ideas.',{exact:true})).toBeVisible();
   await expect(page.getByText('Synthetic human-reviewed browser evidence: the writing mentions books.',{exact:false})).toBeVisible();
-  await expect(page.getByText('Independent proposal · 2 / 4')).toBeVisible();
-  await expect(page.getByRole('button',{name:'Approve proposal'})).toBeDisabled();
+  await expect(page.getByText('Independent proposal · 4 / 4')).toBeVisible();
+  await expect(page.getByRole('button',{name:'Approve proposal'})).toHaveCount(0);
   await logout(page);await login(page,f.reviewerEmail,f.password);
   await page.getByRole('button',{name:'Review case'}).click();
   await page.getByLabel('Decision reason (20–2,000 characters)').fill('Independent reviewer confirms the factor evidence and rubric selection.');
@@ -205,6 +205,35 @@ test('authorized reviewers see the locked writing and factor evidence; correctio
   expect(result.status).toBe(200);
   const row=result.body.assessments.find((x:{assessmentId:string})=>x.assessmentId===record.assessmentId);
   expect(row.status).toBe('FINALIZED');expect(row.reviewPending).toBe(false);
+  expect(row.totalScore).toBe('4');expect(row.revisionNo).toBe(2);
   expect(fixture('inspect',{userId:f.studentUserId,assessmentId:record.assessmentId}).status).toBe('FINALIZED');
   expect(opened.caseId).toMatch(/^[0-9a-f-]{36}$/i);
+});
+
+test('independent reviewer can propose and finalize a score for an unscored AI escalation',async({page})=>{
+  const f=fixture('create');await login(page,f.studentEmail,f.password);
+  await page.getByRole('button',{name:'New writing',exact:true}).click();
+  await page.getByLabel('Choose your topic').selectOption({label:'Books and new ideas · ENGLISH · Linked learner cohort'});
+  await page.getByLabel('Your writing',{exact:true}).fill('I like books. Reading helps me discover new ideas.');
+  const submitted=page.waitForResponse(r=>r.url().endsWith('/api/portal/submissions/typed')&&r.request().method()==='POST');
+  await page.getByRole('button',{name:'Submit writing'}).click();const record=await (await submitted).json();
+  fixture('open-review',{userId:f.studentUserId,assessmentId:record.assessmentId,teacherId:f.teacherId});
+  await logout(page);await login(page,f.teacherEmail,f.password);
+  await page.getByRole('button',{name:'Review case'}).click();
+  await expect(page.getByText('Propose a human-reviewed score')).toBeVisible();
+  await page.getByLabel('Published criterion').selectOption({label:'Clear supported ideas · 4'});
+  await page.getByLabel('Reasoning').fill('Synthetic evidence supports this published rubric criterion.');
+  await page.getByLabel('Exact evidence quote').fill('books');
+  await page.getByLabel('What does it show?').fill('The writing gives a clear idea about reading.');
+  await page.getByLabel('Proposal reason (20–2,000 characters)').fill('The verified writing supports the selected published criterion.');
+  await page.getByRole('button',{name:'Submit for independent review'}).click();
+  await expect(page.getByRole('status')).toContainText('Your immutable proposal was submitted');
+  await logout(page);await login(page,f.reviewerEmail,f.password);
+  await page.getByRole('button',{name:'Review case'}).click();
+  await page.getByLabel('Decision reason (20–2,000 characters)').fill('Independent reviewer confirms the evidence and selected published criterion.');
+  await page.getByRole('button',{name:'Approve proposal'}).click();
+  await expect(page.getByRole('status')).toContainText('The review decision was recorded.');
+  const result=await get(page,`academic/cohorts/${f.batchId}/assessments`);
+  const row=result.body.assessments.find((x:{assessmentId:string})=>x.assessmentId===record.assessmentId);
+  expect(row.status).toBe('FINALIZED');expect(row.totalScore).toBe('4');expect(row.revisionNo).toBe(1);
 });

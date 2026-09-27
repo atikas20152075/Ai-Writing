@@ -125,7 +125,7 @@ async function action(command:string,input:Record<string,string>){
     const teacher=await syntheticUser(input.teacherId);
     const reviews=new HumanReviewService(db);
     const review=await reviews.open(actor(teacher),assessment.id,reason);
-    await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c2',proposedScore:'2',
+    await reviews.propose(actor(teacher),review.caseId,[{factorId:'content',criterionId:'c4',proposedScore:'4',
       rationale:'Synthetic proposal supported by the original verified writing evidence.',
       evidence:[{startOffset:7,endOffset:12,exactQuote:'books',claim:'The verified text mentions books.'}]}],reason);
     return {caseId:review.caseId};

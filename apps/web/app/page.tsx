@@ -60,8 +60,12 @@ export default function Portal(){
  }
  async function openReviewCase(id:string){
   try{const detail=await client.current.request<ReviewCaseDetail>(`review-cases/${id}`,{channel:'review-case'});
-   setReviewCase(detail);setReviewReason('');setReviewFactors(Object.fromEntries((detail.effectiveScore?.factorResults??[]).map(f=>[f.factorId,
-    {criterionId:f.criterionId,proposedScore:f.proposedScore,rationale:f.rationale,quote:f.evidence[0]?.exactQuote??'',claim:f.evidence[0]?.claim??''}])));}
+   setReviewCase(detail);setReviewReason('');setReviewFactors(Object.fromEntries(detail.rubric.factors.map(f=>{
+    const prior=detail.effectiveScore?.factorResults.find(x=>x.factorId===f.id),criterion=f.criteria.find(x=>x.id===prior?.criterionId)??f.criteria[0];
+    return [f.id,{criterionId:criterion?.id??'',proposedScore:prior?.proposedScore??criterion?.score??'',
+     rationale:prior?.rationale??'Human reviewer evidence requires careful assessment.',quote:prior?.evidence[0]?.exactQuote??'',
+     claim:prior?.evidence[0]?.claim??''}];
+   })));}
   catch(e){fail(e);}
  }
  async function reviewAction(path:'proposals'|'decisions',payload:Record<string,unknown>){
@@ -75,13 +79,16 @@ export default function Portal(){
  }
  function submitReviewProposal(event:FormEvent){
   event.preventDefault();if(!reviewCase)return;
-  const source=reviewCase.effectiveScore?.factorResults??[];
-  const factorResults=source.map(f=>{const input=reviewFactors[f.factorId];return {factorId:f.factorId,
-   criterionId:input?.criterionId??f.criterionId,proposedScore:input?.proposedScore??f.proposedScore,
-   rationale:input?.rationale??f.rationale,evidence:[{startOffset:reviewCase.verifiedText.content.indexOf(input?.quote??''),
-    endOffset:reviewCase.verifiedText.content.indexOf(input?.quote??'')+(input?.quote??'').length,
-    exactQuote:input?.quote??'',claim:input?.claim??''}]};});
-  if(factorResults.some(f=>f.evidence[0].startOffset<0)){message('Evidence quote must match the verified writing exactly.',true);return;}
+  const factorResults=reviewCase.rubric.factors.map(f=>{const prior=reviewCase.effectiveScore?.factorResults.find(x=>x.factorId===f.id);
+   const input=reviewFactors[f.id],quote=input?.quote??'',utf16Start=reviewCase.verifiedText.content.indexOf(quote);
+   const startOffset=utf16Start<0?-1:Array.from(reviewCase.verifiedText.content.slice(0,utf16Start)).length;
+   const endOffset=startOffset<0?-1:startOffset+Array.from(quote).length;
+   return {factorId:f.id,criterionId:input?.criterionId??prior?.criterionId??f.criteria[0]?.id,
+    proposedScore:input?.proposedScore??prior?.proposedScore??f.criteria[0]?.score,
+    rationale:input?.rationale??prior?.rationale??'',evidence:[{startOffset,endOffset,exactQuote:quote,claim:input?.claim??prior?.evidence[0]?.claim??''}]};
+  });
+  if(factorResults.some(f=>!f.evidence[0].exactQuote||f.evidence[0].startOffset<0||!f.evidence[0].claim.trim())){
+   message('Add an exact quote from the verified writing and explain what it shows for every factor.',true);return;}
   void reviewAction('proposals',{factorResults,reason:reviewReason});
  }
  useEffect(()=>{
@@ -200,18 +207,20 @@ export default function Portal(){
          <div className="review-actions"><button className="primary" disabled={reviewActionBusy}>Approve proposal</button>
           <button type="button" className="secondary" disabled={reviewActionBusy||reviewReason.trim().length<20} onClick={()=>void reviewAction('decisions',{decision:'REJECT',reason:reviewReason})}>Reject proposal</button></div>
          <small>Decisions are permanent. A different currently assigned reviewer must decide.</small></form>}
-       </>:reviewCase.status==='OPEN'&&reviewCase.effectiveScore&&<div className="review-form"><h4>Keep the current score</h4>
+       </>:reviewCase.status==='OPEN'&&<div className="review-form">{reviewCase.effectiveScore&&<><h4>Keep the current score</h4>
         <p>If the existing approved result is supported, an independent reviewer can record an uphold decision.</p>
         <label>Decision reason (20–2,000 characters)<textarea required minLength={20} maxLength={2000} rows={3} value={reviewReason} onChange={e=>setReviewReason(e.target.value)}/></label>
         <button className="secondary" disabled={reviewActionBusy||reviewReason.trim().length<20} onClick={()=>void reviewAction('decisions',{decision:'UPHOLD',reason:reviewReason})}>Uphold current score</button>
-        <form className="review-form" onSubmit={submitReviewProposal}><h4>Or propose a correction</h4>
-        {reviewCase.effectiveScore?.factorResults.map(f=>{const value=reviewFactors[f.factorId]??{criterionId:f.criterionId,proposedScore:f.proposedScore,rationale:f.rationale,quote:f.evidence[0]?.exactQuote??'',claim:f.evidence[0]?.claim??''};
-         return <fieldset className="review-factor" key={f.factorId}><legend>{f.factorId} · Current {f.proposedScore}</legend>
-          <label>Published criterion<select value={value.criterionId} onChange={e=>{const criterion=reviewCase.rubric.factors.find(x=>x.id===f.factorId)?.criteria.find(x=>x.id===e.target.value);if(criterion)setReviewFactors(old=>({...old,[f.factorId]:{...value,criterionId:e.target.value,proposedScore:criterion.score}}));}}>{reviewCase.rubric.factors.find(x=>x.id===f.factorId)?.criteria.map(x=><option key={x.id} value={x.id}>{x.description} · {x.score}</option>)}</select></label>
-          <label>Proposed score<input inputMode="decimal" value={value.proposedScore} onChange={e=>setReviewFactors(old=>({...old,[f.factorId]:{...value,proposedScore:e.target.value}}))}/></label>
-          <label>Reasoning<textarea required minLength={12} maxLength={2000} rows={3} value={value.rationale} onChange={e=>setReviewFactors(old=>({...old,[f.factorId]:{...value,rationale:e.target.value}}))}/></label>
-          <label>Exact evidence quote<input required maxLength={1000} value={value.quote} onChange={e=>setReviewFactors(old=>({...old,[f.factorId]:{...value,quote:e.target.value}}))}/></label>
-          <label>What does it show?<input required minLength={5} maxLength={1000} value={value.claim} onChange={e=>setReviewFactors(old=>({...old,[f.factorId]:{...value,claim:e.target.value}}))}/></label>
+        </>}
+        <form className="review-form" onSubmit={submitReviewProposal}><h4>{reviewCase.effectiveScore?'Or propose a correction':'Propose a human-reviewed score'}</h4>
+        {reviewCase.rubric.factors.map(f=>{const prior=reviewCase.effectiveScore?.factorResults.find(x=>x.factorId===f.id);
+         const value=reviewFactors[f.id]??{criterionId:prior?.criterionId??f.criteria[0]?.id??'',proposedScore:prior?.proposedScore??f.criteria[0]?.score??'',rationale:prior?.rationale??'',quote:prior?.evidence[0]?.exactQuote??'',claim:prior?.evidence[0]?.claim??''};
+         return <fieldset className="review-factor" key={f.id}><legend>{f.name}{prior?` · Current ${prior.proposedScore}`:` · Maximum ${f.maxScore}`}</legend>
+          <label>Published criterion<select required value={value.criterionId} onChange={e=>{const criterion=f.criteria.find(x=>x.id===e.target.value);if(criterion)setReviewFactors(old=>({...old,[f.id]:{...value,criterionId:e.target.value,proposedScore:criterion.score}}));}}>{f.criteria.map(x=><option key={x.id} value={x.id}>{x.description} · {x.score}</option>)}</select></label>
+          <label>Proposed score<input required inputMode="decimal" value={value.proposedScore} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,proposedScore:e.target.value}}))}/></label>
+          <label>Reasoning<textarea required minLength={12} maxLength={2000} rows={3} value={value.rationale} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,rationale:e.target.value}}))}/></label>
+          <label>Exact evidence quote<input required maxLength={1000} value={value.quote} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,quote:e.target.value}}))}/></label>
+          <label>What does it show?<input required minLength={5} maxLength={1000} value={value.claim} onChange={e=>setReviewFactors(old=>({...old,[f.id]:{...value,claim:e.target.value}}))}/></label>
          </fieldset>})}
         <label>Proposal reason (20–2,000 characters)<textarea required minLength={20} maxLength={2000} rows={3} value={reviewReason} onChange={e=>setReviewReason(e.target.value)}/></label>
         <button className="primary" disabled={reviewActionBusy||reviewReason.trim().length<20}>Submit for independent review</button><small>Scores must match the published rubric. Evidence is checked against the verified writing. Your proposal does not change the score.</small>

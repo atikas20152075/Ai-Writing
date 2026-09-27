@@ -201,11 +201,9 @@ export class HumanReviewService {
   async readCase(actor:Actor,id:string){
     const c=await this.db.humanReviewCase.findUnique({where:{id}});
     if(!c)throw new NotFoundException();
-    const a=await this.db.assessment.findUnique({where:{id:c.assessmentId},include:{submission:{include:{student:true,verifiedText:true}},effectiveScoreRevision:true}});
-    if(!a)throw new NotFoundException();
     // Current grant and educational authority, even for already resolved historical cases.
     return this.db.$transaction(async tx=>{
-      const {subject,s}=await this.subject(tx,c.assessmentId);
+      const {subject,s,a}=await this.subject(tx,c.assessmentId);
       if(['OPEN','PROPOSED'].includes(c.status)&&
         (c.priorRevisionId!==subject.effectiveScoreRevisionId||!['FINALIZED','HUMAN_REVIEW'].includes(subject.status)))
         throw new NotFoundException();
