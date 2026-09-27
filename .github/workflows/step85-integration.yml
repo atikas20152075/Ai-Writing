@@ -116,3 +116,47 @@ jobs:
           name: step93-browser-evidence
           path: apps/web/test-results
           retention-days: 7
+  web-fullstack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: writing_ci
+          POSTGRES_PASSWORD: synthetic_ci_password
+          POSTGRES_DB: writing_browser_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U writing_ci -d writing_browser_test"
+          --health-interval 5s --health-timeout 5s --health-retries 15
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://writing_ci:synthetic_ci_password@127.0.0.1:5432/writing_browser_test?schema=public
+      WRITING_FULLSTACK_ACK: ONLY_SYNTHETIC_TEST_DATA
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.16.0'
+      - name: Install locked dependencies and migrate disposable browser database
+        run: |
+          npm ci --no-audit --no-fund
+          npm --workspace apps/api run db:generate
+          npm --workspace apps/api run db:migrate
+          npx tsc --noEmit -p apps/api/tsconfig.browser.json
+          node --test scripts/fullstack-safety.test.mjs
+      - name: Install Chromium
+        working-directory: apps/web
+        run: npx playwright install --with-deps chromium
+      - name: Desktop and mobile through actual Next.js, NestJS and PostgreSQL
+        run: npm --workspace apps/web run test:e2e:fullstack
+      - name: Preserve synthetic full-stack failure traces and screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step93-fullstack-browser-evidence
+          path: apps/web/test-results-fullstack
+          retention-days: 7

@@ -47,4 +47,4 @@ PR #14 implements this continuation after merged PR #13. Initial full CI on `eae
 
 Local Chromium 153 also passed all 12 browser scenarios. Desktop editor and mobile parent-result screenshots were visually inspected: responsive layout, readable factor evidence, no horizontal overflow in the tested teacher view. Initial browser-launch failures came from the local graphics stack; the optional local executable configuration now disables GPU paths without disabling browser web security. The standard CI browser uses Playwright defaults.
 
-Next development gate: full-stack browser tests through real NestJS/PostgreSQL, then current-revision learning/PFCR interfaces. This milestone does not close the remaining release work above.
+Continuation: [real NestJS/PostgreSQL browser gate](step93-fullstack-browser.md) adds a separate CI job. Its successful PR-head run is the evidence required before continuing to current-revision learning/PFCR interfaces. This milestone does not close the remaining release work above.

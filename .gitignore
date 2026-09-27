@@ -14,3 +14,4 @@ reports/
 *.tsbuildinfo
 test-results/
 playwright-report/
+test-results-fullstack/
