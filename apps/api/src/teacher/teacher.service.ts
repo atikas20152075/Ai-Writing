@@ -98,11 +98,12 @@ export class TeacherDashboardService{
        AND g."programId"=p.id AND g."assignedAt"<=statement_timestamp() AND g."endedAt" IS NULL)))`;
    const authorized=scope[0];
    if(!authorized)throw new NotFoundException();
-   const rows=await tx.$queryRaw<Array<{rubricVersionId:string;totalMarks:Prisma.Decimal|null;
+   const rows=await tx.$queryRaw<Array<{rubricVersionId:string;rubricVersion:number;writingType:string;language:string;totalMarks:Prisma.Decimal|null;
      assessmentCount:bigint;finalizedCount:bigint;representedLearnerCount:bigint;
      notFinalizedCount:bigint;unavailableResultCount:bigint;meanScore:Prisma.Decimal|null;minimumScore:Prisma.Decimal|null;
      maximumScore:Prisma.Decimal|null}>>`
-    SELECT s."rubricVersionId",MAX(r."totalMarks") AS "totalMarks",
+    SELECT s."rubricVersionId",v.version AS "rubricVersion",v."writingType",v.language,
+     MAX(r."totalMarks") AS "totalMarks",
      COUNT(a.id)::bigint AS "assessmentCount",
      COUNT(r.id)::bigint AS "finalizedCount",
      COUNT(DISTINCT s."studentId") FILTER (WHERE r.id IS NOT NULL)::bigint AS "representedLearnerCount",
@@ -111,6 +112,7 @@ export class TeacherDashboardService{
      ROUND(AVG(r."totalScore"),2) AS "meanScore",MIN(r."totalScore") AS "minimumScore",
      MAX(r."totalScore") AS "maximumScore"
     FROM "Submission" s
+    JOIN "RubricVersion" v ON v.id=s."rubricVersionId" AND v."programId"=s."programId"
     JOIN "Assessment" a ON a."submissionId"=s.id
     LEFT JOIN "AssessmentScoreRevision" r ON r.id=a."effectiveScoreRevisionId"
      AND r."assessmentId"=a.id AND a.status='FINALIZED'
@@ -122,11 +124,12 @@ export class TeacherDashboardService{
      AND EXISTS(SELECT 1 FROM "ProcessingAuthority" p WHERE p."studentId"=s."studentId"
        AND p."programId"=s."programId" AND p.purpose='CORE_ASSESSMENT'
        AND p.status='ACTIVE' AND p."endedAt" IS NULL)
-    GROUP BY s."rubricVersionId" ORDER BY s."rubricVersionId"`;
+    GROUP BY s."rubricVersionId",v.version,v."writingType",v.language ORDER BY s."rubricVersionId"`;
    return {batchId:authorized.batchId,programId:authorized.programId,scope:'CURRENT_AUTHORIZED_ENROLLMENT',
     asOf:authorized.asOf.toISOString(),
     disclaimer:'Descriptive, assessment-weighted current results. Repeated assessments count separately; rubric versions are reported separately and are not comparable across groups.',
-    groups:rows.map(x=>({rubricVersionId:x.rubricVersionId,
+    groups:rows.map(x=>({rubricVersionId:x.rubricVersionId,rubricVersion:x.rubricVersion,
+     writingType:x.writingType,language:x.language,
      assessmentCount:Number(x.assessmentCount),finalizedCount:Number(x.finalizedCount),
      representedLearnerCount:Number(x.representedLearnerCount),notFinalizedCount:Number(x.notFinalizedCount),
      unavailableResultCount:Number(x.unavailableResultCount),

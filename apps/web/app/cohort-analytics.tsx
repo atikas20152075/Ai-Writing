@@ -17,10 +17,12 @@ export function CohortAnalytics({data,loading,onRefresh}:{data:CohortAnalyticsDa
   {loading&&!data?<p className="analytics-empty" role="status">Loading the current cohort summary…</p>:!data?<p className="analytics-empty">Choose a cohort to view its current summary.</p>:data.groups.length===0?<p className="analytics-empty">No current authorized assessments are available for this cohort.</p>:<>
    <p className="analytics-disclaimer">{data.disclaimer}</p>
    <div className="analytics-groups">{data.groups.map(group=>{
+    const language=group.language==='BANGLA'?'Bangla':group.language==='ENGLISH'?'English':group.language;
+    const writingType=group.writingType.toLocaleLowerCase().replaceAll('_',' ');
     const percentage=group.meanScore!==null&&group.totalMarks!==null&&Number(group.totalMarks)>0
      ?Math.max(0,Math.min(100,Number(group.meanScore)/Number(group.totalMarks)*100)):0;
     return <article className="analytics-group" key={group.rubricVersionId}>
-     <div className="analytics-title"><div><span className="eyebrow">IMMUTABLE RUBRIC VERSION</span><h3>{group.rubricVersionId.slice(0,8)}</h3></div>
+     <div className="analytics-title"><div><span className="eyebrow">IMMUTABLE RUBRIC VERSION</span><h3>{language} {writingType} · Rubric v{group.rubricVersion}</h3></div>
       <span className="analytics-count">{group.finalizedCount} of {group.assessmentCount} finalized</span></div>
      <div className="analytics-metrics">
       <div><strong>{group.representedLearnerCount}</strong><span>Learners represented</span></div>
