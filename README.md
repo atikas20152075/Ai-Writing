@@ -1,6 +1,6 @@
 # AI Writing Assessment Platform — Development repository
 
-**Current development stage:** Step 100 production readiness review: **NO-GO for production or real learner data**. This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
+**Current development stage:** Step 104 language-aware report download workflow: **NO-GO for production or real learner data**. This is a **development-only** repository, not a deployed website or verified AI-grading product. No real students' data, real credentials or payment secrets belong in this public repository.
 
 ## Project documentation
 
@@ -9,6 +9,8 @@
 - [Step 95 authorized review queue](docs/step95-review-queue.md)
 - [Step 99 API response hardening](docs/step99-api-response-hardening.md)
 - [Step 100 production readiness decision](docs/step100-production-readiness.md)
+- [Step 103 bilingual PDF reports](docs/step103-bilingual-reports.md)
+- [Step 104 language-aware report downloads](docs/step104-multilingual-report-download.md)
 
 - [Master Blueprint v3 index and retained v2 full architecture audit](docs/master-blueprint-v3-current.md)
 - [Original audited Master Blueprint v2](docs/master-blueprint-v2.md)

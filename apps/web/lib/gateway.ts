@@ -124,8 +124,11 @@ export async function gateway(request:Request,env:Env=process.env,transport:type
   const pdf=path.startsWith('reports/');
   const bytes=await boundedBody(upstream.body,pdf?5*1024*1024:2*1024*1024);
   if(pdf&&!upstream.headers.get('content-type')?.startsWith('application/pdf'))throw new GatewayFailure(502);
+  const reportLanguage=upstream.headers.get('content-language');
+  if(pdf&&reportLanguage!=='en'&&reportLanguage!=='bn-BD')throw new GatewayFailure(502);
+  const reportLocale=reportLanguage==='bn-BD'?'bn':'en';
   return new Response(bytes,{status:upstream.status,headers:{...safeHeaders,'Content-Type':pdf?'application/pdf':'application/json',
-   ...(pdf?{'Content-Disposition':`attachment; filename="writing-report-${path.split('/')[2].slice(0,8)}.pdf"`}:{})}});
+   ...(pdf?{'Content-Language':reportLanguage!,'Content-Disposition':`attachment; filename="writing-report-${reportLocale}-${path.split('/')[2].slice(0,8)}.pdf"`}:{})}});
  }catch(error){
   const status=error instanceof GatewayFailure?error.status:503;
   const response=json({error:status===401?'Sign in required':status===429?'Please try again later':'Service unavailable'},status);

@@ -26,7 +26,7 @@ test('student signs in, submits original writing, sees pending and approved resu
 test('parent sees linked assessments with pagination and current PDF download',async({page},info)=>{
  await login(page,'parent');await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
  await page.getByRole('button',{name:'View result'}).click();await expect(page.getByText('Synthetic approved fixture:',{exact:false})).toBeVisible();
- const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download English PDF'}).click();expect((await download).suggestedFilename()).toMatch(/writing-report-/);
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download report'}).click();expect((await download).suggestedFilename()).toMatch(/writing-report-en-/);
  await page.screenshot({path:info.outputPath('parent-dashboard.png'),fullPage:true});
  await page.getByRole('button',{name:'Next page'}).click();await expect(page.getByText('A new attempt · synthetic fixture')).toBeVisible();
  await expect(page.getByText('The joy of reading · synthetic fixture')).toHaveCount(0);
@@ -35,7 +35,7 @@ test('parent sees linked assessments with pagination and current PDF download',a
 test('teacher discovers assigned cohorts without entering private identifiers',async({page},info)=>{
  await login(page,'teacher');await expect(page.getByLabel('Choose a cohort')).toHaveValue('44444444-4444-4444-8444-444444444444');
  await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
- await expect(page.getByRole('button',{name:'English PDF',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();
  await page.screenshot({path:info.outputPath('teacher-dashboard.png'),fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });

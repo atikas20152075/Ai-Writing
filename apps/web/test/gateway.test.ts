@@ -63,8 +63,14 @@ test('BFF validates CSRF on cookie-authenticated writes and body size before for
 });
 test('PDF is private attachment and upstream content type is verified',async()=>{
  const path='reports/assessments/12345678-1234-1234-1234-123456789012/pdf';
- const good=await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf'}})) as typeof fetch);
- assert.equal(good.status,200);assert.match(good.headers.get('content-disposition')!,/attachment/);assert.equal(await good.text(),'%PDF-test');
+ const good=await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf','Content-Language':'bn-BD'}})) as typeof fetch);
+ assert.equal(good.status,200);assert.equal(good.headers.get('content-language'),'bn-BD');
+ assert.equal(good.headers.get('content-disposition'),'attachment; filename="writing-report-bn-12345678.pdf"');
+ assert.equal(await good.text(),'%PDF-test');
+ const english=await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf','Content-Language':'en'}})) as typeof fetch);
+ assert.equal(english.headers.get('content-disposition'),'attachment; filename="writing-report-en-12345678.pdf"');
+ assert.equal((await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf'}})) as typeof fetch)).status,502);
+ assert.equal((await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf','Content-Language':'fr'}})) as typeof fetch)).status,502);
  assert.equal((await gateway(request(path),env,(async()=>new Response('<html>error</html>')) as typeof fetch)).status,502);
 });
 test('logout clears both cookies even when upstream fails; absent cookies require sign-in',async()=>{
