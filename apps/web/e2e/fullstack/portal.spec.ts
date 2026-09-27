@@ -100,7 +100,7 @@ test('real submission, independent human approval, linked-family privacy and liv
   await login(page,f.teacherEmail,f.password);
   await expect(page.getByLabel('Choose a cohort')).toHaveValue(f.batchId);
   await expect(page.getByRole('heading',{name:'Assessment summary'})).toBeVisible();
-  await expect(page.getByText('2 / 4',{exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'Cohort score summary'}).getByText('2 / 4',{exact:true})).toBeVisible();
   await expect(page.getByText('1 of 1 finalized',{exact:true})).toBeVisible();
   await expect(page.getByText('Books and new ideas',{exact:true})).toBeVisible();
   expect((await get(page,`academic/cohorts/${f.otherBatchId}/assessments`)).status).toBe(404);
