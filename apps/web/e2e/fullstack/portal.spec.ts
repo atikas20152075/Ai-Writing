@@ -85,8 +85,9 @@ test('real submission, independent human approval, linked-family privacy and liv
   expect((await get(page,`parents/me/children/${f.otherStudentId}/assessments/${record.assessmentId}/result`)).status).toBe(404);
   await page.getByRole('button',{name:'View result'}).click();
   const downloadEvent=page.waitForEvent('download');
-  await page.getByRole('button',{name:'Download English PDF'}).click();
+  await page.getByRole('button',{name:'Download report'}).click();
   const download=await downloadEvent;expect(await download.failure()).toBeNull();
+  expect(download.suggestedFilename()).toMatch(/writing-report-en-/);
   const pdf=await readFile((await download.path())!);expect(pdf.subarray(0,5).toString()).toBe('%PDF-');
   expect(pdf.length).toBeGreaterThan(500);
   fixture('revoke-parent',{userId:f.parentId,rootId:f.rootId,linkId:f.linkId});
@@ -100,7 +101,7 @@ test('real submission, independent human approval, linked-family privacy and liv
   await expect(page.getByLabel('Choose a cohort')).toHaveValue(f.batchId);
   await expect(page.getByText('Books and new ideas',{exact:true})).toBeVisible();
   expect((await get(page,`academic/cohorts/${f.otherBatchId}/assessments`)).status).toBe(404);
-  await expect(page.getByRole('button',{name:'English PDF',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();
   fixture('revoke-teacher',{userId:f.teacherId,assignmentId:f.assignmentId});
   expect((await get(page,`academic/cohorts/${f.batchId}/assessments`)).status).toBe(404);
   expect((await get(page,`reports/assessments/${record.assessmentId}/pdf`)).status).toBe(404);

@@ -67,6 +67,10 @@ Implements authenticated teacher/batch and program-admin read access without a g
 
 Adds immutable language-specific v2 report snapshots while preserving v1 history; Bangla/English in-memory PDFs embed licensed Noto Sans Bengali subsets, declare document language, and render through bounded ReportLab/HarfBuzz subprocess with timeout/output/input limits. Synthetic checks validate Bangla text extraction, shaping/rendering, embedded fonts, pagination and unsafe-text rejection. The PDF is not tagged/PDF-UA certified: structure tree, screen-reader/expert language review, private artifact lifecycle, measured capacity and independent release controls remain blocked. See [Step103](step103-bilingual-reports.md). No real learner text was used; release remains NO-GO.
 
+### Step 104 — Language-aware report downloads (development)
+
+Carries the API's validated `en`/`bn-BD` report language through the BFF, fails closed when PDF language metadata is missing or unsupported, produces language-specific filenames, and removes English-only labels from the portal. Local gateway checks cover both locales; synthetic English portal browser flows verify the download path. PDF accessibility and real learner-data release remain blocked. See [Step104 details](step104-multilingual-report-download.md).
+
 ## Step93 continuation — current portal scope
 
 PRs #11–12 added a local static student/teacher preview and scoped topic catalog/typed editor. The follow-up [family portal and session-safety increment](step93-family-portal.md) adds verified-family discovery/detail, parent/teacher pagination, and late-response fencing. The web workspace is still **not Next.js**. Step92 production closeout, browser E2E, bilingual reports and real-model/child-data approvals remain open. See the linked evidence for exact checks; historical sections above remain historical snapshots.

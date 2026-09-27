@@ -45,6 +45,6 @@ createServer(async(req,res)=>{
  if(path===`parents/me/children/${student}/assessments/${id}/result`&&role==='PARENT'){send(result);return;}
  if(path==='academic/cohorts/mine'&&role==='TEACHER'){send({cohorts:[{id:batch,name:'Cadet writers',programName:'Guided writing'}],truncated:false});return;}
  if(path===`academic/cohorts/${batch}/assessments`&&role==='TEACHER'){send({assessments:[approved],nextCursor:null});return;}
- if(path===`reports/assessments/${id}/pdf`&&role!=='SUPER_ADMIN'){res.writeHead(200,{'Content-Type':'application/pdf'});res.end('%PDF-1.4\nSynthetic transport fixture, not an academic report.\n%%EOF');return;}
+ if(path===`reports/assessments/${id}/pdf`&&role!=='SUPER_ADMIN'){res.writeHead(200,{'Content-Type':'application/pdf','Content-Language':'en'});res.end('%PDF-1.4\nSynthetic transport fixture, not an academic report.\n%%EOF');return;}
  send({},404);
 }).listen(3011,'127.0.0.1');

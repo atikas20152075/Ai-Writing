@@ -9,7 +9,7 @@ export class PortalClient {
   if(channel)this.channels.set(channel,version);
   return ()=>{if(epoch!==this.epoch||(channel&&this.channels.get(channel)!==version))throw new Superseded();};
  }
- async request<T>(path:string,options:{body?:unknown;channel?:string;pdf?:boolean}={}):Promise<T>{
+ async request<T>(path:string,options:{body?:unknown;channel?:string;pdf?:boolean;onHeaders?:(headers:Headers)=>void}={}):Promise<T>{
   const current=this.capture(options.channel);let response:Response;
   try{response=await fetch('/api/portal/'+path,{method:options.body===undefined?'GET':'POST',
    credentials:'same-origin',cache:'no-store',headers:{'X-Writing-Client':'portal',...(options.body===undefined?{}:{'Content-Type':'application/json'})},
@@ -18,9 +18,10 @@ export class PortalClient {
   current();
   if(!response.ok)throw new APIError(response.status,response.status===401?'Your session has ended. Please sign in again.':
    response.status===403||response.status===404?'This record is no longer available to your account.':
-   response.status===409&&options.pdf?'This report is not available as an English PDF yet. You can still view the approved result.':
+   response.status===409&&options.pdf?'This report is not available yet. You can still view the approved result.':
    response.status===409?'Your writing context may have changed. Refresh the assessment, then try again.':
    response.status===429?'Please wait a moment before trying again.':'We could not complete this request. Please try again.');
+  options.onHeaders?.(response.headers);
   let data:unknown;try{data=options.pdf?await response.blob():await response.json();}catch{current();throw new APIError(502,'We could not read the response. Please refresh.');}
   current();return data as T;
  }
