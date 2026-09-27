@@ -78,7 +78,7 @@ The teacher and scoped academic-administrator API reports descriptive cohort agg
 
 ## Step 99 — API response hardening
 
-The API now sets private no-store, anti-sniffing, anti-framing, referrer, and permissions headers on every response and disables Express `X-Powered-By`. The synthetic HTTP smoke suite checks health and authenticated profile headers. See [Step99 scope and limits](docs/step99-api-response-hardening.md). This does not establish production readiness. Next task: Step 100 — Production Release gates and readiness review.
+The API now sets private no-store, anti-sniffing, anti-framing, referrer, and permissions headers on every response and disables Express `X-Powered-By`. The synthetic HTTP smoke suite checks health and authenticated profile headers. PR #23 is merged, and exact-head CI [36336277257](https://github.com/atikas20152075/Ai-Writing/actions/runs/36336277257) passed all three jobs. See [Step99 scope and limits](docs/step99-api-response-hardening.md). This does not establish production readiness. Next task: Step 100 — Production Release gates and readiness review.
 
 ## Step 97 — Student dashboard
 

@@ -14,6 +14,7 @@
 
 - Apply private no-store and browser security headers to all API responses, including error responses; disable Express `X-Powered-By`.
 - Extend synthetic loopback HTTP checks to enforce the headers on health and authenticated profile routes.
+- PR #23 merged; exact-head CI run [36336277257](https://github.com/atikas20152075/Ai-Writing/actions/runs/36336277257) passed all three jobs.
 - Next task: Step 100 — Production Release gates and readiness review.
 
 ### Step 97 — Student dashboard
