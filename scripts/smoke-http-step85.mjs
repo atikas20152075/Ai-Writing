@@ -25,7 +25,7 @@ async function request(path,{method='GET',token,body,cookie}={}){
   const response=await fetch(`${base}${path}`,{method,headers,body:body===undefined?undefined:JSON.stringify(body),redirect:'manual'});
   const text=await response.text();
   let data;try{data=text?JSON.parse(text):null;}catch{data=text;}
-  return {status:response.status,data,cookie:response.headers.get('set-cookie')};
+  return {status:response.status,data,cookie:response.headers.get('set-cookie'),headers:response.headers};
 }
 async function expectStatus(path,options,status,why){
   const result=await request(path,options);
@@ -35,11 +35,19 @@ async function expectStatus(path,options,status,why){
 }
 function post(path,body,token){return {method:'POST',body,token};}
 
-await expectStatus('/health',{},200,'API readiness');
+const health=await expectStatus('/health',{},200,'API readiness');
+assert.equal(health.headers.get('cache-control'),'private, no-store, max-age=0');
+assert.equal(health.headers.get('pragma'),'no-cache');
+assert.equal(health.headers.get('x-content-type-options'),'nosniff');
+assert.equal(health.headers.get('x-frame-options'),'DENY');
+assert.equal(health.headers.get('referrer-policy'),'no-referrer');
+assert.equal(health.headers.get('permissions-policy'),'camera=(), microphone=(), geolocation=()');
+assert.equal(health.headers.get('x-powered-by'),null);
 const student=await expectStatus('/auth/register',post('/auth/register',{email:studentEmail,password:studentPassword}),201,'synthetic student registration');
 assert.ok(student.data.accessToken);
 const studentToken=student.data.accessToken;
 const profile=await expectStatus('/students/me',{token:studentToken},200,'student profile');
+assert.equal(profile.headers.get('cache-control'),'private, no-store, max-age=0');
 assert.ok(profile.data.id);
 const studentId=profile.data.id;
 const admin=await expectStatus('/auth/login',post('/auth/login',{email:adminEmail,password:adminPassword}),200,'synthetic administrator login');
