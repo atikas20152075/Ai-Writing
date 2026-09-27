@@ -32,7 +32,7 @@ Upgrades `@nestjs/common`, `@nestjs/core`, and `@nestjs/platform-express` to 11.
 
 ### Step 106 — Teacher cohort analytics view (development)
 
-Adds a staff-only responsive summary over the existing authorized analytics endpoint. Current results remain separated by immutable rubric version; the portal shows finalized coverage, represented learners, mean/range, and pending/unavailable counts without learner or assessment identifiers. The endpoint remains the authority for current assignment, enrollment, processing authority, and canonical revisions. This is assessment-weighted descriptive data, not growth or mastery. Small-cohort suppression and production approvals remain open. See [Step106 details](step106-cohort-analytics-ui.md).
+Adds a staff-only responsive summary over the existing authorized analytics endpoint. Current results remain separated by immutable rubric version; the portal shows finalized coverage, represented learners, mean/range, and pending/unavailable counts without learner or assessment identifiers. The endpoint remains the authority for current assignment, enrollment, processing authority, and canonical revisions. This is assessment-weighted descriptive data, not growth or mastery. Small-cohort suppression and production approvals remain open. PR #31 exact-head CI [36357844849](https://github.com/atikas20152075/Ai-Writing/actions/runs/36357844849) passed backend integration, web portal and full-stack desktop/mobile jobs. See [Step106 details](step106-cohort-analytics-ui.md).
 
 ## Source organization
 
