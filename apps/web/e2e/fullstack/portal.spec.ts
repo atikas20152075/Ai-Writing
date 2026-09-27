@@ -29,6 +29,8 @@ async function logout(page:Page){
 test('real submission, independent human approval, linked-family privacy and live scope revocation',async({page,context},info)=>{
   const f=fixture('create');
   await login(page,f.studentEmail,f.password);
+  await expect(page.getByRole('heading',{name:'Your first draft begins with one idea.'})).toBeVisible();
+  await expect(page.getByRole('heading',{name:'No approved score yet'})).toBeVisible();
   await page.getByRole('button',{name:'New writing',exact:true}).click();
   await page.getByLabel('Choose your topic').selectOption({label:'Books and new ideas · ENGLISH · Linked learner cohort'});
   const writing='I like books. Reading helps me discover new ideas.';
@@ -37,6 +39,9 @@ test('real submission, independent human approval, linked-family privacy and liv
   await page.getByRole('button',{name:'Submit writing'}).click();
   const response=await submitted;expect(response.status()).toBe(201);
   const record=await response.json();expect(record.status).toBe('AWAITING_UNDERSTANDING');
+  const pendingMine=await get(page,'submissions/mine');
+  expect(pendingMine.status).toBe(200);expect(pendingMine.body).toHaveLength(1);
+  expect(pendingMine.body[0].assessment).toMatchObject({status:'AWAITING_UNDERSTANDING',effectiveResult:null});
   expect(fixture('inspect',{userId:f.studentUserId,assessmentId:record.assessmentId})).toEqual({
     text:writing,status:'AWAITING_UNDERSTANDING',submissionCount:1,acceptedEvents:1});
   await page.getByRole('button',{name:'View result'}).click();
@@ -47,7 +52,19 @@ test('real submission, independent human approval, linked-family privacy and liv
   await page.getByRole('button',{name:'View result'}).click();
   await expect(page.getByText('Revision 1 · Human-reviewed')).toBeVisible();
   await expect(page.getByText('Synthetic human-reviewed browser evidence:',{exact:false})).toBeVisible();
-  await page.screenshot({path:info.outputPath('real-student-result.png'),fullPage:true});
+  const mine=await get(page,'submissions/mine');
+  expect(mine.status).toBe(200);expect(mine.body).toHaveLength(1);
+  expect(mine.body[0]).toMatchObject({topicTitle:'Books and new ideas',assessment:{status:'FINALIZED',
+    effectiveResult:{revisionNo:1,source:'HUMAN',totalScore:'2',totalMarks:'4'}}});
+  expect(JSON.stringify(mine.body)).not.toContain('Unlinked child private topic');
+  const cache=await page.evaluate(async()=>{const r=await fetch('/api/portal/submissions/mine',{headers:{'X-Writing-Client':'portal'}});return r.headers.get('cache-control');});
+  expect(cache).toContain('no-store');
+  await page.getByRole('button',{name:'Overview',exact:true}).click();
+  await expect(page.getByText('LATEST APPROVED RESULT',{exact:true})).toBeVisible();
+  await expect(page.locator('.student-approved-score')).toContainText('2 / 4');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
+  await page.getByRole('button',{name:'Close result'}).click();
+  await page.screenshot({path:info.outputPath('real-student-dashboard.png'),fullPage:true});
   const studentCookies=await context.cookies();
   const access=studentCookies.find(c=>c.name==='writing_access')!;
   expect(access.httpOnly).toBe(true);expect(access.sameSite).toBe('Strict');

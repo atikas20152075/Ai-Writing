@@ -70,3 +70,7 @@ A backend-only authenticated teacher/cohort read endpoint uses current assignmen
 ## Step 94 — PFCR learning view and linked rewrite workflow
 
 Students can now open approved learning material, see revision-pinned rubric feedback/practice targets/progress, write a correction plan and submit a new linked rewrite against the same current approved revision. The backend persists the link and correction note, rechecks student scope/current enrollment/published topic/current source revision, and the database trigger blocks stale or cross-student rewrite links. See [Step94 scope](docs/step94-pfcr-linked-rewrites.md). This remains synthetic development work: no live AI, OCR, real child data, production deployment or expert-approved grading is configured.
+
+## Step 97 — Student dashboard
+
+The student Overview summarizes up to 50 own recent attempts and the latest current approved result. Pending assessments expose no score, and the page does not combine unlike rubrics. Full-stack CI is required before merge; local Playwright is blocked by the missing Chromium binary. See [Step97 scope and limits](docs/step97-student-dashboard.md). Next task: Step 98 — Analytics Engine.

@@ -114,9 +114,21 @@ export class SubmissionService {
     if(actor.role!=='STUDENT') throw new ForbiddenException();
     const s=await this.db.student.findUnique({where:{userId:actor.userId}});
     if(!s) throw new ForbiddenException();
-    return this.db.submission.findMany({where:{studentId:s.id},select:{id:true,programId:true,batchId:true,topicVersionId:true,
-      rewriteOfAssessmentId:true,rewriteOfRevisionId:true,createdAt:true,status:true,
-      assessment:{select:{id:true,status:true}}},orderBy:{createdAt:'desc'},take:50});
+    const rows=await this.db.submission.findMany({where:{studentId:s.id},select:{id:true,programId:true,batchId:true,topicVersionId:true,
+      topicSnapshot:true,rewriteOfAssessmentId:true,rewriteOfRevisionId:true,createdAt:true,status:true,
+      assessment:{select:{id:true,status:true,effectiveScoreRevision:{select:{id:true,revisionNo:true,source:true,totalScore:true,totalMarks:true}}}}},
+      orderBy:{createdAt:'desc'},take:50});
+    return rows.map(row=>{
+      const revision=row.assessment?.status==='FINALIZED'?row.assessment.effectiveScoreRevision:null;
+      const snapshot=row.topicSnapshot as {title?:unknown};
+      return {id:row.id,programId:row.programId,batchId:row.batchId,topicVersionId:row.topicVersionId,
+        topicTitle:typeof snapshot?.title==='string'?snapshot.title:'Writing submission',
+        rewriteOfAssessmentId:row.rewriteOfAssessmentId,rewriteOfRevisionId:row.rewriteOfRevisionId,
+        createdAt:row.createdAt,status:row.status,
+        assessment:row.assessment?{id:row.assessment.id,status:row.assessment.status,
+          effectiveResult:revision?{revisionId:revision.id,revisionNo:revision.revisionNo,source:revision.source,
+            totalScore:revision.totalScore.toString(),totalMarks:revision.totalMarks.toString()}:null}:null};
+    });
   }
   async findMine(actor:Actor,id:string){
     if(actor.role!=='STUDENT') throw new ForbiddenException();

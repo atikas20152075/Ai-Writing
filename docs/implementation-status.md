@@ -77,3 +77,9 @@ Adds a read-only queue for OPEN/PROPOSED human review cases and reviewer-only ca
 ## Step96 — Evidence-first human review workbench
 
 Builds a scoped reviewer case-detail page with verified original writing, full rubric/current factor evidence and immutable proposal history; adds proposal submission, independent approve/reject, and uphold actions through the existing service invariants. BFF write allowlist is exact UUID proposal/decision routes only. Local API/web typechecks, API policy typecheck, web BFF tests and production build pass. Synthetic desktop/mobile full-stack tests cover reviewer separation, finalized-score revision 2 and the first revision from an unscored escalation; local Playwright service startup is blocked by scratch-container `/tmp/tsx-*.pipe` EPERM, so merge is gated on GitHub Actions. See [Step96 details](step96-review-workbench.md). All data remains synthetic; no deployment or live AI.
+
+## Step97 — Student dashboard (PR validation pending)
+
+The student Overview now shows up to 50 own recent submissions, pending/finalized counts for that list, the newest attempt, and the latest current approved revision. `GET /submissions/mine` returns only a minimal effective-result summary for finalized assessments and is `private, no-store`; pending assessments never include scores. No cross-rubric average or lifetime total is shown. Local API/web typechecks and builds, 8 web tests, browser-fixture typecheck and `git diff --check` pass. Local Playwright cannot start because Chromium is not installed; merge is gated on full-stack GitHub Actions desktop/mobile browser CI for the final PR head. See [Step97 details](step97-student-dashboard.md). Synthetic data only; no deployment, live AI, efficacy claim, or release readiness.
+
+**Next task pointer: Step98 — Analytics Engine.**
