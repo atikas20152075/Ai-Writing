@@ -455,7 +455,7 @@ test('Step98 cohort analytics stays current, authorization scoped, and separated
   const original=await tx.submission.findUniqueOrThrow({where:{id:f.assessment.submissionId}});
   const teacher=await tx.user.create({data:{email:`analytics-${randomUUID()}@example.test`,role:'TEACHER',passwordHash:'SYNTHETIC'}});
   const assignment=await tx.teacherBatch.create({data:{teacherId:teacher.id,batchId:original.batchId}});
-  const dashboard=new TeacherDashboardService(tx);
+  const dashboard=new TeacherDashboardService({$transaction:(cb:any)=>cb(tx)} as any);
   const secondUser=await tx.user.create({data:{email:`analytics-student-${randomUUID()}@example.test`,role:'STUDENT',passwordHash:'SYNTHETIC'}});
   const secondStudent=await tx.student.create({data:{userId:secondUser.id}});
   await tx.enrollment.create({data:{studentId:secondStudent.id,programId:original.programId,batchId:original.batchId}});
