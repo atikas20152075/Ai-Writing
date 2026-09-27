@@ -15,3 +15,5 @@ reports/
 test-results/
 playwright-report/
 test-results-fullstack/
+
+*.egg-info/

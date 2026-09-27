@@ -17,10 +17,11 @@
     "test:db": "tsx --test --test-concurrency=1 test/postgres.integration.test.ts test/step88.integration.test.ts test/step89.integration.test.ts test/step90.integration.test.ts"
   },
   "dependencies": {
+    "@expo-google-fonts/noto-sans-bengali": "^0.4.4",
     "@nestjs/common": "^11.2.5",
     "@nestjs/core": "^11.2.5",
-    "@nestjs/platform-express": "^11.2.5",
     "@nestjs/jwt": "^11.0.2",
+    "@nestjs/platform-express": "^11.2.5",
     "@prisma/client": "^6.3.0",
     "argon2": "^0.41.1",
     "class-transformer": "^0.5.1",
@@ -30,9 +31,9 @@
     "rxjs": "^7.8.1"
   },
   "devDependencies": {
-    "prisma": "^6.3.0",
-    "tsx": "^4.19.0",
     "@types/cookie-parser": "^1.4.8",
-    "@types/express": "^4.17.21"
+    "@types/express": "^4.17.21",
+    "prisma": "^6.3.0",
+    "tsx": "^4.19.0"
   }
 }

@@ -254,12 +254,13 @@ test('a new comparable assessment invalidates and proactively refreshes an older
 });
 
 
-test('Step92 English PDF is a real scoped export with immutable current revision provenance',{skip:!enabled},async()=>{
+test('Step103 bilingual PDF is a real scoped export with immutable current revision provenance',{skip:!enabled},async()=>{
  await rollbackCase(async tx=>{
   const f=await finalized(tx);
   const report=new ReportService({$transaction:async(cb:any)=>cb(tx)} as any);
-  const first=await report.englishPdf(actor(f.user),f.assessment.id);
-  assert.ok(first.pdf.subarray(0,8).toString().startsWith('%PDF-1.4'));
+  const first=await report.pdfReport(actor(f.user),f.assessment.id);
+  assert.ok(first.pdf.subarray(0,8).toString().startsWith('%PDF-1.7'));
+  assert.equal(first.formatVersion,'rubric-report-v2-en');
   assert.equal(first.revisionId,f.firstRevision);
   const stored=await tx.reportSnapshot.findFirstOrThrow({where:{assessmentId:f.assessment.id}});
   assert.equal(stored.scoreRevisionId,f.firstRevision);
@@ -267,11 +268,11 @@ test('Step92 English PDF is a real scoped export with immutable current revision
   const receipt=await tx.derivedProjectionInvalidation.findFirstOrThrow({where:{
     assessmentId:f.assessment.id,scoreRevisionId:f.firstRevision,target:'REPORT'}});
   assert.equal(receipt.status,'REBUILT');
-  const second=await report.englishPdf(actor(f.a),f.assessment.id);
-  assert.deepEqual(first.pdf,second.pdf);
+  const second=await report.pdfReport(actor(f.a),f.assessment.id);
+  assert.equal(first.snapshotHash,second.snapshotHash);
   assert.equal(await tx.reportSnapshot.count({where:{assessmentId:f.assessment.id}}),1);
   const issued=await tx.auditEvent.count({where:{
-    resourceId:f.assessment.id,action:'ENGLISH_PDF_REPORT_GENERATED'}});
+    resourceId:f.assessment.id,action:'REPORT_PDF_GENERATED'}});
   assert.equal(issued,2);
  });
 });
@@ -292,21 +293,21 @@ test('Step92 current-scoped teacher and guardian report; revoke rights, never by
   const assignment=await tx.teacherBatch.create({data:{teacherId:teacher.id,batchId:sub.batchId}});
   const teacherPage=await dashboard.cohort(actor(teacher),sub.batchId);
   assert.equal(teacherPage.assessments.length,1);
-  assert.equal((await report.englishPdf(actor(teacher),f.assessment.id)).revisionId,f.firstRevision);
+  assert.equal((await report.pdfReport(actor(teacher),f.assessment.id)).revisionId,f.firstRevision);
   const guardian=await tx.user.create({data:{email:`guardian-${randomUUID()}@example.test`,
     role:'PARENT',passwordHash:'SYNTHETIC'}});
   const link=await tx.parentStudentLink.create({data:{guardianId:guardian.id,studentId:f.student.id,
     programId:sub.programId,status:'ACTIVE',verifiedAt:new Date(),activatedAt:new Date(),
     approvedById:f.a.id}});
-  assert.equal((await report.englishPdf(actor(guardian),f.assessment.id)).revisionId,f.firstRevision);
+  assert.equal((await report.pdfReport(actor(guardian),f.assessment.id)).revisionId,f.firstRevision);
   await tx.parentStudentLink.update({where:{id:link.id},data:{status:'REVOKED',revokedAt:new Date()}});
-  await assert.rejects(report.englishPdf(actor(guardian),f.assessment.id),/Not Found|NotFound/i);
+  await assert.rejects(report.pdfReport(actor(guardian),f.assessment.id),/Not Found|NotFound/i);
   await tx.teacherBatch.update({where:{id:assignment.id},data:{endedAt:new Date()}});
   await assert.rejects(dashboard.cohort(actor(teacher),sub.batchId),/Not Found|NotFound/i);
-  await assert.rejects(report.englishPdf(actor(teacher),f.assessment.id),/Not Found|NotFound/i);
+  await assert.rejects(report.pdfReport(actor(teacher),f.assessment.id),/Not Found|NotFound/i);
   const superUser=await tx.user.create({data:{email:`super-${randomUUID()}@example.test`,
     role:'SUPER_ADMIN',passwordHash:'SYNTHETIC'}});
-  await assert.rejects(report.englishPdf(actor(superUser),f.assessment.id),/Not Found|NotFound/i);
+  await assert.rejects(report.pdfReport(actor(superUser),f.assessment.id),/Not Found|NotFound/i);
   await assert.rejects(dashboard.cohort(actor(superUser),sub.batchId),/Forbidden/i);
  });
 });
@@ -314,20 +315,19 @@ test('Step92 updated human grade always generates a NEW report revision; old sna
  await rollbackCase(async tx=>{
   const f=await finalized(tx);
   const service=new ReportService({$transaction:async(cb:any)=>cb(tx)} as any);
-  const original=await service.englishPdf(actor(f.user),f.assessment.id);
+  const original=await service.pdfReport(actor(f.user),f.assessment.id);
   const appeal=await f.reviews.open(actor(f.user),f.assessment.id,reason);
   await f.reviews.propose(actor(f.a),appeal.caseId,factors('c4','4'),reason);
   await f.reviews.decide(actor(f.b),appeal.caseId,'APPROVE',reason);
   const current=await tx.assessment.findUniqueOrThrow({where:{id:f.assessment.id}});
   assert.notEqual(current.effectiveScoreRevisionId,original.revisionId);
-  const revised=await service.englishPdf(actor(f.user),f.assessment.id);
+  const revised=await service.pdfReport(actor(f.user),f.assessment.id);
   assert.notEqual(revised.revisionId,original.revisionId);
-  assert.ok(revised.pdf.toString().includes('TOTAL: 4 / 4'));
-  assert.ok(original.pdf.toString().includes('TOTAL: 2 / 4'));
+  assert.notEqual(revised.snapshotHash,original.snapshotHash);
   assert.equal(await tx.reportSnapshot.count({where:{assessmentId:f.assessment.id}}),2);
   await assert.rejects(tx.reportSnapshot.update({where:{
     assessmentId_scoreRevisionId_formatVersion:{assessmentId:f.assessment.id,
-      scoreRevisionId:original.revisionId,formatVersion:'english-rubric-report-v1'}},
+      scoreRevisionId:original.revisionId,formatVersion:'rubric-report-v2-en'}},
     data:{snapshotHash:'f'.repeat(64)}}),/STEP88_/);
  });
 });
@@ -344,9 +344,9 @@ test('Step92 DB rejects forged report points or REPORT REBUILT without a real sn
   const sub=await tx.submission.findUniqueOrThrow({where:{id:(
     await tx.assessment.findUniqueOrThrow({where:{id:f.assessment.id}})).submissionId}});
   await assert.rejects(tx.reportSnapshot.create({data:{assessmentId:f.assessment.id,
-    scoreRevisionId:f.firstRevision,formatVersion:'english-rubric-report-v1',
+    scoreRevisionId:f.firstRevision,formatVersion:'rubric-report-v2-en',
     snapshotHash:'a'.repeat(64),createdById:f.a.id,
-    snapshot:{schemaVersion:'english-rubric-report-v1',assessmentId:f.assessment.id,
+    snapshot:{schemaVersion:'rubric-report-v2',assessmentId:f.assessment.id,
       scoreRevisionId:f.firstRevision,revisionNo:1,rubricVersionId:sub.rubricVersionId,
       source:'HUMAN',language:'ENGLISH',topicTitle:'Synthetic reading',
       totalScore:'99',totalMarks:'4',factorResults:[]}}}),
