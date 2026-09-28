@@ -15,7 +15,7 @@ The merged Step92 milestone is **synthetic-tested development-only**. This check
 - [x] Add document language, selectable copy and bounded in-memory output for multilingual layouts.
 - [x] Generate a tagged PDF structure tree and pass pinned veraPDF 1.30.2 PDF/UA-1 validation for fresh synthetic English and Bangla samples (Step 116). This does not claim PDF/UA-2 conformance.
 - [ ] Complete independent screen-reader/accessibility review of HTML and PDFs, including spoken reading order, Bengali shaping-only glyph behavior, keyboard operation, and representative short/long reports. Step 117 adds automated Chromium accessibility-API assertions only.
-- [ ] Measure production performance/memory limits.
+- [ ] Measure production performance/memory limits. Step 121 now caps PDF rendering at one active Chromium process per API instance and returns a retryable 503 for overlap; this code safeguard does not replace target-environment latency, memory, multi-instance, or sustained-load measurements.
 - [ ] Provide private report artifact storage (encrypted at rest, key rotation, region/vendor approval), owner-scoped metadata, malware/content-type controls and short-lived delivery only after *fresh* educational authority verification.
 - [ ] Define immutable revision-linked report artifact versioning, supersession, revocation limitations for already downloaded reports, and lifecycle retention/deletion/reconciliation that do not erase mandated immutable academic audit evidence.
 - [ ] Run penetration testing, authorization IDOR/revocation races, high-concurrency load testing and disaster-recovery exercises with published acceptance thresholds.
