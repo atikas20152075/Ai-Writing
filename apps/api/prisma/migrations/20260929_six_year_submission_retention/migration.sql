@@ -2,6 +2,8 @@
 ALTER TABLE "Submission" ADD COLUMN "dataExpiresAt" TIMESTAMPTZ;
 UPDATE "Submission" SET "dataExpiresAt" = "createdAt" + INTERVAL '6 years';
 ALTER TABLE "Submission" ALTER COLUMN "dataExpiresAt" SET NOT NULL;
+ALTER TABLE "Submission" ALTER COLUMN "dataExpiresAt"
+  SET DEFAULT (CURRENT_TIMESTAMP + INTERVAL '6 years');
 ALTER TABLE "Submission" ADD CONSTRAINT "Submission_six_year_expiry_check"
   CHECK ("dataExpiresAt" = "createdAt" + INTERVAL '6 years');
 CREATE INDEX "Submission_retention_due_idx" ON "Submission"("dataExpiresAt", id);
