@@ -22,7 +22,7 @@ test('English PDF has a structure tree, embedded Noto font, and declared languag
  const bytes=pdf.toString('latin1');
  assert.match(bytes,/\/StructTreeRoot/); assert.match(bytes,/\/MarkInfo/);
  assert.match(bytes,/\/FontFile2/); assert.match(bytes,/\/ToUnicode/);
- assert.match(bytes,/\/Lang \\(en-US\\)/);
+ assert.match(bytes,/\/Lang \(en-US\)/);
  assert.ok(pdf.length>1000);
 });
 test('Bangla PDF has tagged structure, language metadata, and exact selectable text',async()=>{
@@ -32,18 +32,18 @@ test('Bangla PDF has tagged structure, language metadata, and exact selectable t
  assert.equal(reportFormatVersion(report.language),'rubric-report-v2-bn');
  const pdf=await renderReportPdf(report);
  const bytes=pdf.toString('latin1');
- assert.match(bytes,/\/Lang \\(bn-BD\\)/);
+ assert.match(bytes,/\/Lang \(bn-BD\)/);
  assert.match(bytes,/\/StructTreeRoot/); assert.match(bytes,/\/MarkInfo/);
  assert.match(bytes,/\/FontFile2/); assert.match(bytes,/\/ToUnicode/);
  assert.ok(pdf.length>1000);
  const {execFileSync}=await import('node:child_process');
  const extracted=execFileSync('pdftotext',['-','-'],{input:pdf,maxBuffer:8*1024*1024}).toString();
- const normalize=(value:string)=>value.normalize('NFC').replace(/\\s+/gu,' ').trim();
+ const normalize=(value:string)=>value.normalize('NFC').replace(/\s+/gu,' ').trim();
  for(const text of reportLines(report).map(line=>line.text))
   assert.ok(normalize(extracted).includes(normalize(text)),`missing or reordered extracted text: ${text}`);
 });
 test('unsafe text controls, missing evidence, and malformed marks are refused',()=>{
- assert.throws(()=>reportFromApprovedSource({...input,topicSnapshot:{title:'safe\\u202Eevil'}}),
+ assert.throws(()=>reportFromApprovedSource({...input,topicSnapshot:{title:'safe\u202Eevil'}}),
   (e:unknown)=>e instanceof ReportPolicyError&&e.code==='REPORT_INVALID_TEXT');
  assert.throws(()=>reportFromApprovedSource({...input,factorResults:[{...input.factorResults[0],evidence:[]}]}));
  assert.throws(()=>reportFromApprovedSource({...input,totalScore:'Infinity'}));
@@ -54,5 +54,5 @@ test('multi-page bilingual extracts paginate within the bounded report size',asy
   rationale:'অনুমোদিত নমুনা ব্যাখ্যা। '.repeat(16),
   evidence:Array.from({length:5},()=>({exactQuote:'মূল লেখার একটি নমুনা প্রমাণ বাক্য।'}))}))});
  const pdf=await renderReportPdf(report);
- assert.ok((pdf.toString('latin1').match(/\/Type \/Page\\b/g)||[]).length>1);
+ assert.ok((pdf.toString('latin1').match(/\/Type \/Page\b/g)||[]).length>1);
 });
