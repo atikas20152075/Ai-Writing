@@ -5,9 +5,9 @@ const require=createRequire(import.meta.url);
 const regular=require.resolve('@expo-google-fonts/noto-sans-bengali/400Regular/NotoSansBengali_400Regular.ttf');
 const bold=require.resolve('@expo-google-fonts/noto-sans-bengali/700Bold/NotoSansBengali_700Bold.ttf');
 const renderer=new URL('./report-pdf.py',import.meta.url);
-const MAX_BYTES=8*1024*1024,MAX_INPUT=2*1024*1024,TIMEOUT_MS=10_000;
+const MAX_BYTES=8*1024*1024,MAX_INPUT=2*1024*1024,TIMEOUT_MS=25_000;
 
-/** Render approved report text in an isolated bounded worker with ReportLab/HarfBuzz shaping. */
+/** Render approved report text through an isolated bounded PDF/UA LibreOffice worker. */
 export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
  if(report.schemaVersion!=='rubric-report-v2'||!['BANGLA','ENGLISH'].includes(report.language))
   throw new ReportPolicyError('REPORT_FORMAT_UNSUPPORTED');
