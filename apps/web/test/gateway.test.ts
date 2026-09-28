@@ -73,6 +73,21 @@ test('PDF is private attachment and upstream content type is verified',async()=>
  assert.equal((await gateway(request(path),env,(async()=>new Response('%PDF-test',{headers:{'Content-Type':'application/pdf','Content-Language':'fr'}})) as typeof fetch)).status,502);
  assert.equal((await gateway(request(path),env,(async()=>new Response('<html>error</html>')) as typeof fetch)).status,502);
 });
+test('accessible report snapshot is private JSON with verified language metadata',async()=>{
+ const path='reports/assessments/12345678-1234-1234-1234-123456789012/snapshot';
+ const good=await gateway(request(path),env,(async()=>Response.json({schemaVersion:'rubric-report-v2'},
+  {headers:{'Content-Language':'bn-BD'}})) as typeof fetch);
+ assert.equal(good.status,200);assert.equal(good.headers.get('content-language'),'bn-BD');
+ assert.equal(good.headers.get('cache-control'),'private, no-store, max-age=0');
+ assert.equal(good.headers.get('content-type'),'application/json');
+ assert.deepEqual(await good.json(),{schemaVersion:'rubric-report-v2'});
+ assert.equal((await gateway(request(path),env,(async()=>Response.json({},
+  {headers:{'Content-Language':'en'}})) as typeof fetch)).status,200);
+ assert.equal((await gateway(request(path),env,(async()=>Response.json({},
+  {headers:{'Content-Language':'fr'}})) as typeof fetch)).status,502);
+ assert.equal((await gateway(request(path),env,(async()=>new Response('<html>bad</html>',
+  {headers:{'Content-Type':'text/html','Content-Language':'en'}})) as typeof fetch)).status,502);
+});
 test('logout clears both cookies even when upstream fails; absent cookies require sign-in',async()=>{
  const failed=await gateway(request('auth/logout','POST'),env,(async()=>{throw Error('private network diagnostic');}) as typeof fetch);
  assert.equal(failed.status,503);assert.equal(failed.headers.getSetCookie().length,2);assert.ok(failed.headers.getSetCookie().every(x=>x.includes('Max-Age=0')));

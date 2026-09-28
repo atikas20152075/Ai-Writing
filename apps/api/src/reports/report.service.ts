@@ -10,7 +10,8 @@ import {renderReportPdf} from './report-pdf.ts';
 @Injectable()
 export class ReportService{
  constructor(@Inject(PrismaService)private readonly db:PrismaService){}
- async pdfReport(actor:Actor,assessmentId:string){
+ async reportSnapshot(actor:Actor,assessmentId:string,auditAction='REPORT_SNAPSHOT_VIEWED',
+  renderPdf?: (snapshot:Awaited<ReturnType<typeof reportFromApprovedSource>>)=>Promise<Buffer>){
   return this.db.$transaction(async tx=>{
    const row=await authorizedReport(tx,actor,assessmentId);
    let snapshot;
@@ -24,12 +25,12 @@ export class ReportService{
     if(error instanceof ReportPolicyError)throw new ConflictException(error.code);
     throw error;
    }
-   // Printable bytes are generated BEFORE persisting a success record.
-   let pdf:Buffer;
-   try{pdf=await renderReportPdf(snapshot);}catch(error){
+   // Keep PDF rendering before the success record and invalidation receipt commit.
+   let pdf:Buffer|undefined;
+   if(renderPdf){try{pdf=await renderPdf(snapshot);}catch(error){
     if(error instanceof ReportPolicyError)throw new ConflictException(error.code);
     throw error;
-   }
+   }}
    const sha=reportHash(snapshot),formatVersion=reportFormatVersion(snapshot.language);
    const existing=await tx.reportSnapshot.findUnique({where:{assessmentId_scoreRevisionId_formatVersion:{
      assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}}});
@@ -58,10 +59,18 @@ export class ReportService{
     await tx.derivedProjectionInvalidation.update({where:{id:receipt.id},data:{
       status:'REBUILT',errorCode:null,processedAt:new Date()}});
    }
-   await tx.auditEvent.create({data:{actorId:actor.userId,action:'REPORT_PDF_GENERATED',
+   await tx.auditEvent.create({data:{actorId:actor.userId,action:auditAction,
      resourceType:'Assessment',resourceId:row.assessmentId,
      details:{revisionId:row.scoreRevisionId,snapshotHash:sha,formatVersion,language:snapshot.language}}});
-   return {pdf,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion};
+   return {snapshot,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion,
+    ...(pdf?{pdf}:{})};
   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
+ }
+ async pdfReport(actor:Actor,assessmentId:string){
+  // The PDF renders before its snapshot receipt commits, using the same
+  // current-scope authorization and audit path as the HTML report.
+  const out=await this.reportSnapshot(actor,assessmentId,'REPORT_PDF_GENERATED',renderReportPdf);
+  if(!out.pdf)throw new ConflictException('REPORT_RENDER_FAILED');
+  return {...out,pdf:out.pdf};
  }
 }

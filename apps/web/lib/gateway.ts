@@ -8,7 +8,7 @@ const reads=[/^academic\/cohorts\/mine$/,/^auth\/me$/,/^submissions\/mine(?:\/wr
  new RegExp(`^academic/cohorts/${uuid}/analytics$`),
  /^review-cases$/,
  new RegExp(`^review-cases/${uuid}$`),
- new RegExp(`^reports/assessments/${uuid}/pdf$`)];
+ new RegExp(`^reports/assessments/${uuid}/(?:pdf|snapshot)$`)];
 const cursorRoutes=[/^parents\/me\/children\/assessments$/,new RegExp(`^academic/cohorts/${uuid}/assessments$`)];
 const safeHeaders={'Cache-Control':'private, no-store, max-age=0','X-Content-Type-Options':'nosniff','Vary':'Cookie'};
 type Env=Record<string,string|undefined>;
@@ -121,14 +121,17 @@ export async function gateway(request:Request,env:Env=process.env,transport:type
   const upstream=await call(path+url.search,method,body);
   if(!upstream.ok)return json({error:upstream.status===401?'Sign in required':'Record or operation unavailable'},[400,401,403,404,409,413,429].includes(upstream.status)?upstream.status:502);
   // Never forward upstream cookies, redirects, internal diagnostics, or arbitrary headers.
-  const pdf=path.startsWith('reports/');
+  const pdf=path.endsWith('/pdf');
+  const report=path.startsWith('reports/');
   const bytes=await boundedBody(upstream.body,pdf?5*1024*1024:2*1024*1024);
   if(pdf&&!upstream.headers.get('content-type')?.startsWith('application/pdf'))throw new GatewayFailure(502);
   const reportLanguage=upstream.headers.get('content-language');
-  if(pdf&&reportLanguage!=='en'&&reportLanguage!=='bn-BD')throw new GatewayFailure(502);
+  if(report&&(reportLanguage!=='en'&&reportLanguage!=='bn-BD'))throw new GatewayFailure(502);
+  if(report&&!pdf&&!upstream.headers.get('content-type')?.startsWith('application/json'))throw new GatewayFailure(502);
   const reportLocale=reportLanguage==='bn-BD'?'bn':'en';
   return new Response(bytes,{status:upstream.status,headers:{...safeHeaders,'Content-Type':pdf?'application/pdf':'application/json',
-   ...(pdf?{'Content-Language':reportLanguage!,'Content-Disposition':`attachment; filename="writing-report-${reportLocale}-${path.split('/')[2].slice(0,8)}.pdf"`}:{})}});
+   ...(report?{'Content-Language':reportLanguage!}:{}),
+   ...(pdf?{'Content-Disposition':`attachment; filename="writing-report-${reportLocale}-${path.split('/')[2].slice(0,8)}.pdf"`}:{})}});
  }catch(error){
   const status=error instanceof GatewayFailure?error.status:503;
   const response=json({error:status===401?'Sign in required':status===429?'Please try again later':'Service unavailable'},status);

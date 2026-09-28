@@ -1,0 +1,7 @@
+# Step 109 — Accessible HTML report alternative (development)
+
+Adds a structured HTML report view for approved score snapshots. It uses the existing current-scope report authorization, rate budget, immutable snapshot, audit event, and no-store response. Students and parents can open it from an approved result; authorized academic staff can open it from a finalized cohort row. English and Bangla render with the corresponding language tag. The page uses headings, definition lists, evidence lists, and browser print/save controls.
+
+The existing PDF download remains available. This HTML view is a more screen-reader-friendly alternative, but it has not received independent assistive-technology or user review and does not claim WCAG/PDF-UA conformance. PDF structure tagging, external accessibility review, private artifact lifecycle, expert bilingual review, and production approval remain open under [Step 92 closeout](step92-production-closeout.md) and [Step 100 NO-GO](step100-production-readiness.md). Synthetic development only.
+
+Verification: web typecheck and all web BFF tests pass; API typecheck and 35 assessment policy/report tests pass. Full-stack CI and screen-reader review are still required before treating this as validated for release.

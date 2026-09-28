@@ -1,0 +1,7 @@
+# Step 110 — Accessible report authorization and browser coverage (development)
+
+Extends the synthetic desktop/mobile full-stack browser scenarios for the Step 109 HTML report. Coverage now opens the report as a student, linked parent, and currently assigned teacher; checks English and Bangla document language and report content; confirms an unrelated learner's report is unavailable; verifies a newly approved revision returns the new score/revision; and checks snapshot access fails after guardian-link or teacher-assignment revocation. The fixtures continue to use synthetic identities and do not invoke a live AI provider.
+
+Local verification: web and API typechecks, all 9 web BFF tests, all 35 assessment/report tests, `git diff --check`, and Playwright test discovery pass. The actual full-stack browser execution requires the disposable loopback `writing_browser_test` PostgreSQL database. This workspace has no PostgreSQL or container runtime, so those browser cases were not run locally; exact-head CI must execute them.
+
+These browser assertions verify application content and fresh-request authorization. They are not independent screen-reader testing, PDF/UA validation, or a production readiness claim. PDF structure tagging, external accessibility review, private artifact lifecycle, expert bilingual review and other Step 92/100 gates remain open.
