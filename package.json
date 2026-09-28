@@ -28,7 +28,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:static": "node --test scripts/static-invariants.test.mjs && node --test scripts/step93-frontend-static.test.mjs && node --test scripts/step93-session-behavior.test.mjs",
     "smoke:http": "node scripts/smoke-http-step85.mjs",
-    "test:assessment": "node --experimental-strip-types --test apps/api/test/assessment-policy.test.ts apps/api/test/review-policy.test.ts apps/api/test/projection-policy.test.ts apps/api/test/learning-builders.test.ts apps/api/test/report-policy.test.ts apps/api/test/report-rate-policy.test.ts apps/api/test/writing-options-policy.test.ts"
+    "test:assessment": "node --experimental-strip-types --test apps/api/test/assessment-policy.test.ts apps/api/test/review-policy.test.ts apps/api/test/projection-policy.test.ts apps/api/test/learning-builders.test.ts apps/api/test/report-policy.test.ts apps/api/test/report-rate-policy.test.ts apps/api/test/report-render-limiter.test.ts apps/api/test/writing-options-policy.test.ts"
   },
   "type": "module",
   "devDependencies": {
