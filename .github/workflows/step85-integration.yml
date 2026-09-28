@@ -52,6 +52,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Install Chromium for tagged report rendering
         run: npx playwright install --with-deps chromium
+      - name: Generate synthetic bilingual PDF accessibility samples
+        run: node --experimental-strip-types scripts/export-report-pdf-samples.mjs /tmp/report-pdf-samples
       - name: Block high and critical dependency advisories
         run: npm audit --audit-level=high
       - name: TypeScript domain and pure-policy checks
@@ -93,6 +95,13 @@ jobs:
           python -m pip install -e 'apps/ai-service[test]'
           (cd apps/ai-service && python -m pytest -q)
           node --experimental-strip-types --test apps/api/test/report-policy.test.ts
+      - name: Preserve synthetic bilingual PDF samples for independent review
+        uses: actions/upload-artifact@v4
+        with:
+          name: step115-bilingual-pdf-samples
+          path: /tmp/report-pdf-samples/*.pdf
+          if-no-files-found: error
+          retention-days: 14
   web-portal:
     runs-on: ubuntu-latest
     timeout-minutes: 15
