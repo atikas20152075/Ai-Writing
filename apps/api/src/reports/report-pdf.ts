@@ -4,6 +4,8 @@ import {readFile} from 'node:fs/promises';
 import {reportLines,ReportPolicyError,type PrintableReport} from './report-policy.ts';
 
 const require=createRequire(import.meta.url);
+const {PDFDocument,PDFName,PDFNumber,PDFDict,PDFRawStream,decodePDFRawStream}=require('pdf-lib') as any;
+const fontkit=require('fontkit') as any;
 const regular=require.resolve('@expo-google-fonts/noto-sans-bengali/400Regular/NotoSansBengali_400Regular.ttf');
 const bold=require.resolve('@expo-google-fonts/noto-sans-bengali/700Bold/NotoSansBengali_700Bold.ttf');
 const MAX_BYTES=8*1024*1024,MAX_INPUT=2*1024*1024,TIMEOUT_MS=8_000;
@@ -39,6 +41,61 @@ function markup(report:PrintableReport,regularBase64:string,boldBase64:string):s
   </style></head><body>${body}</body></html>`;
 }
 
+function unicodeForNotoGlyph(name:string):string{
+ const encoded=name.match(/^uni((?:[0-9a-f]{4})+)/i)?.[1];
+ if(encoded&&encoded.length%4===0)return encoded.toUpperCase();
+ if(name.startsWith('raphalabeng'))return '09B009CD';
+ if(name.startsWith('baphalabeng'))return '09AC09CD';
+ // Bengali headline fragments are shaping-only glyphs with no source character.
+ if(name.startsWith('headlinebeng'))return '';
+ throw new ReportPolicyError('REPORT_UNICODE_MAPPING_MISSING');
+}
+
+export async function repairTaggedPdf(pdf:Buffer,report:PrintableReport):Promise<Buffer>{
+ const language=report.language==='BANGLA'?'bn-BD':'en-US';
+ const title=report.language==='BANGLA'?'লিখিত মূল্যায়ন প্রতিবেদন':'Writing assessment report';
+ const doc=await PDFDocument.load(pdf,{updateMetadata:false});
+ doc.setTitle(title);doc.setLanguage(language);
+ const noto={
+  Bold:fontkit.create(await readFile(bold)),
+  Regular:fontkit.create(await readFile(regular)),
+ };
+ let taggedFonts=0;
+ for(const page of doc.getPages()){
+  const resources=doc.context.lookup(page.node.Resources());
+  const fonts=doc.context.lookup(resources.get(PDFName.of('Font')));
+  for(const [,fontRef] of fonts.entries()){
+   taggedFonts++;
+   const font=doc.context.lookup(fontRef);
+   const baseName=font.get(PDFName.of('BaseFont')).decodeText();
+   const style=baseName.endsWith('Bold')?'Bold':'Regular';
+   const descendants=doc.context.lookup(font.get(PDFName.of('DescendantFonts')));
+   const descendant=doc.context.lookup(descendants.get(0));
+   const cidMap=descendant.get(PDFName.of('CIDToGIDMap'));
+   if(cidMap&&cidMap.decodeText()!=='Identity')throw new ReportPolicyError('REPORT_UNICODE_MAPPING_MISSING');
+   const cmap=doc.context.lookup(font.get(PDFName.of('ToUnicode')));
+   const source=Buffer.from(decodePDFRawStream(cmap).decode()).toString('latin1');
+   const mapped=source.replace(/<([0-9a-f]{4})>\s*<0000>/gi,(_match:string,cidHex:string)=>{
+    const glyph=noto[style].getGlyph(Number.parseInt(cidHex,16));
+    const unicode=unicodeForNotoGlyph(glyph.name);
+    return `<${cidHex.toUpperCase()}> <${unicode}>`;
+   });
+   const encoded=Buffer.from(mapped,'latin1');
+   cmap.dict.delete(PDFName.of('Filter'));cmap.dict.delete(PDFName.of('DecodeParms'));
+   cmap.dict.set(PDFName.of('Length'),PDFNumber.of(encoded.length));cmap.contents=encoded;
+  }
+ }
+ if(taggedFonts===0)throw new ReportPolicyError('REPORT_TAGGING_MISSING');
+ const escapedTitle=title.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+ const xmp=`<?xpacket begin="\uFEFF" id="W5M0MpCehiHzreSzNTczkc9d"?><x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description rdf:about="" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:pdfuaid="http://www.aiim.org/pdfua/ns/id/"><pdfuaid:part>1</pdfuaid:part><dc:title><rdf:Alt><rdf:li xml:lang="x-default">${escapedTitle}</rdf:li><rdf:li xml:lang="${language}">${escapedTitle}</rdf:li></rdf:Alt></dc:title></rdf:Description></rdf:RDF></x:xmpmeta><?xpacket end="w"?>`;
+ const metadata=PDFDict.withContext(doc.context);
+ metadata.set(PDFName.of('Type'),PDFName.of('Metadata'));metadata.set(PDFName.of('Subtype'),PDFName.of('XML'));
+ doc.catalog.set(PDFName.of('Metadata'),doc.context.register(PDFRawStream.of(metadata,new TextEncoder().encode(xmp))));
+ const viewerPreferences=doc.context.lookup(doc.catalog.get(PDFName.of('ViewerPreferences')));
+ viewerPreferences.set(PDFName.of('DisplayDocTitle'),doc.context.obj(true));
+ return Buffer.from(await doc.save({useObjectStreams:false}));
+}
+
 /** Print approved content through Chromium with semantic HTML and explicit tagged output. */
 export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
  if(report.schemaVersion!=='rubric-report-v2'||!['BANGLA','ENGLISH'].includes(report.language))
@@ -62,7 +119,8 @@ export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
     const html=markup(report,(await readFile(regular)).toString('base64'),(await readFile(bold)).toString('base64'));
     await page.setContent(html,{waitUntil:'load',timeout:TIMEOUT_MS});
     await page.evaluate(()=>document.fonts.ready.then(()=>true));
-    return await page.pdf({format:'Letter',preferCSSPageSize:true,printBackground:true,tagged:true,outline:true});
+    const bytes=await page.pdf({format:'Letter',preferCSSPageSize:true,printBackground:true,tagged:true,outline:true});
+    return repairTaggedPdf(bytes,report);
    }finally{await context.close().catch(()=>undefined);}
   })();
   const pdf=await Promise.race([
