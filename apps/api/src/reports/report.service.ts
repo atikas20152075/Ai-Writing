@@ -32,17 +32,12 @@ export class ReportService{
     throw error;
    }}
    const sha=reportHash(snapshot),formatVersion=reportFormatVersion(snapshot.language);
-   const existing=await tx.reportSnapshot.findUnique({where:{assessmentId_scoreRevisionId_formatVersion:{
-     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}}});
-   if(existing){
-    if(existing.snapshotHash!==sha)
-     throw new ConflictException('REPORT_FORMAT_VERSION_CONFLICT');
-   }else{
-    await tx.reportSnapshot.create({data:{assessmentId:row.assessmentId,
-      scoreRevisionId:row.scoreRevisionId,formatVersion,
-      snapshot:snapshot as unknown as Prisma.InputJsonValue,snapshotHash:sha,
-      createdById:actor.userId}});
-   }
+   const stored=await tx.reportSnapshot.upsert({where:{assessmentId_scoreRevisionId_formatVersion:{
+     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}},
+    create:{assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion,
+     snapshot:snapshot as unknown as Prisma.InputJsonValue,snapshotHash:sha,createdById:actor.userId},
+    update:{},select:{snapshotHash:true}});
+   if(stored.snapshotHash!==sha)throw new ConflictException('REPORT_FORMAT_VERSION_CONFLICT');
    // Step91 opt-in worker may already have BLOCKED this target. A real snapshot
    // exists now, so revive and resolve only this exact effective revision.
    const receipt=await tx.derivedProjectionInvalidation.findUnique({where:{
