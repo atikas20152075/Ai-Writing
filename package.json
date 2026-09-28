@@ -20,7 +20,7 @@
   "scripts": {
     "test:domain": "node --experimental-strip-types --test packages/domain/test/*.test.ts",
     "demo": "node --experimental-strip-types scripts/typed-slice-demo.ts",
-    "test:policies": "node --experimental-strip-types --test apps/api/test/policies.test.ts apps/api/test/auth-rate-policy.test.ts",
+    "test:policies": "node --experimental-strip-types --test apps/api/test/policies.test.ts apps/api/test/auth-rate-policy.test.ts apps/api/test/retention-policy.test.ts",
     "test:ai-gateway": "node --experimental-strip-types --test apps/api/test/ai-gateway.test.ts",
     "test": "npm run test:domain && npm run test:policies && npm run test:ai-gateway && npm run test:static && npm run test:assessment",
     "test:python": "cd apps/ai-service && python -m pytest -q",
