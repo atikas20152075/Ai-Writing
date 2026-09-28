@@ -3,6 +3,7 @@ import {Prisma} from '@prisma/client';
 import {randomUUID} from 'node:crypto';
 import {hash,createVerifiedText,type PublishedRubric} from '../../../../packages/domain/src/index.ts';
 import {PrismaService} from '../prisma/prisma.service.ts';
+import {submissionExpiry} from '../privacy/retention-policy.ts';
 import {assertTypedSubmissionEligible,canonicalJson} from '../policies/submission-policy.ts';
 import type {Actor} from '../auth/jwt.guard.ts';
 import type {CreateTypedSubmissionDto,CreateRewriteSubmissionDto} from './submission.dto.ts';
@@ -78,12 +79,14 @@ export class SubmissionService {
           if(!source)throw new ConflictException('Approved source revision or writing scope changed');
         }
         const topicSnapshot={id:topic.id,programId:topic.programId,writingType:topic.writingType,language:topic.language,title:topic.title,instructions:topic.instructions,clues:topic.clues};
+        const acceptedAt=new Date();
         const created=await tx.submission.create({data:{studentId:student.id,programId:dto.programId,batchId:dto.batchId,
           topicVersionId:topic.id,rubricVersionId:rubric.id,clientRequestId:dto.clientRequestId,
           rewriteOfAssessmentId:rewrite?.assessmentId,rewriteOfRevisionId:rewrite?.revisionId,
           correctionNote:rewrite?.note,
           topicSnapshot:topicSnapshot as Prisma.InputJsonValue,rubricSnapshot:rubricSnapshot as unknown as Prisma.InputJsonValue,
-          topicHash:hash(canonicalJson(topicSnapshot)),rubricHash:rubric.snapshotHash}});
+          topicHash:hash(canonicalJson(topicSnapshot)),rubricHash:rubric.snapshotHash,
+          createdAt:acceptedAt,dataExpiresAt:submissionExpiry(acceptedAt)}});
         const verified=createVerifiedText(randomUUID(),created.id,topic.language as 'BANGLA'|'ENGLISH',dto.text);
         await tx.verifiedWritingText.create({data:{id:verified.id,submissionId:created.id,language:topic.language,content:verified.text,contentHash:verified.contentHash,verifiedById:actor.userId}});
         const assessment=await tx.assessment.create({data:{submissionId:created.id,status:'AWAITING_UNDERSTANDING'}});
