@@ -38,7 +38,7 @@ test('Bangla PDF has tagged structure, language metadata, and exact selectable t
  assert.ok(pdf.length>1000);
  const {execFileSync}=await import('node:child_process');
  const extracted=execFileSync('pdftotext',['-raw','-','-'],{input:pdf,maxBuffer:8*1024*1024}).toString();
- const normalize=(value:string)=>value.normalize('NFC').replace(/\s+/gu,' ').trim();
+ const normalize=(value:string)=>value.normalize('NFC').replace(/\s+/gu,'');
  for(const text of reportLines(report).map(line=>line.text))
   assert.ok(normalize(extracted).includes(normalize(text)),`missing or reordered extracted text: ${text}; extracted=${normalize(extracted)}`);
 });
