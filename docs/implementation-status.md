@@ -42,6 +42,14 @@ Extends each authorized cohort analytics group with its immutable rubric version
 
 The authorized analytics response now withholds every numeric count and score for an immutable-rubric group with fewer than five distinct learners represented by finalized current results. The staff portal shows a privacy notice instead of suppressed values. PostgreSQL coverage verifies suppression below the threshold, visible aggregates at five learners, and refreshed results after a score revision; desktop/mobile browser checks cover both privacy states. This minimum group size does not stop every inference across overlapping groups or repeated releases, and it does not close production privacy/legal approval. See [Step108 details](step108-small-cohort-suppression.md).
 
+### Step 109 — Accessible HTML report alternative (development)
+
+Adds an authorized, immutable snapshot JSON route and a structured, language-aware HTML report with print/save support for students, parents, and authorized academic staff. It reuses current report scope checks, rate limits, revision receipts, and audit logging; it does not broaden report content or expose unfinalized scores. Web typecheck and all nine BFF tests pass; API typecheck and 35 assessment policy/report tests pass. Independent screen-reader review and full-stack CI remain outstanding. This is not a conformance claim and does not close PDF tagging, retention, or production gates. See [Step109 details](step109-accessible-html-report.md).
+
+### Step 110 — Accessible report browser and scope coverage (development)
+
+Synthetic desktop/mobile full-stack scenarios now cover student, linked-parent, and assigned-teacher HTML report views, English/Bangla language, current approved revision refresh, unrelated learner denial, and current-scope revocation. Web/API typechecks, all 9 BFF tests, all 35 assessment/report tests, and Playwright discovery pass. Full-stack browser execution still requires exact-head CI: this workspace has neither a PostgreSQL server nor a container runtime. Independent screen-reader review and PDF structure tags remain open. See [Step110 details](step110-accessible-report-e2e.md).
+
 ## Source organization
 
 - `docs/master-blueprint-v2.md`: retained original corrected audit (Step 71 checkpoint).
@@ -114,4 +122,4 @@ Builds a scoped reviewer case-detail page with verified original writing, full r
 
 The student Overview now shows up to 50 own recent submissions, pending/finalized counts for that list, the newest attempt, and the latest current approved revision. `GET /submissions/mine` returns only a minimal effective-result summary for finalized assessments and is `private, no-store`; pending assessments never include scores. No cross-rubric average or lifetime total is shown. Local API/web typechecks and builds, 106 Node tests, 8 web BFF tests, browser-fixture typecheck and `git diff --check` pass. PR #19 merged as `b262e070e207db22da86f3e5e9581ea1b26f4aaa`. Final PR-head CI [36328104902](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328104902) and post-merge main CI [36328284717](https://github.com/atikas20152075/Ai-Writing/actions/runs/36328284717) both PASSED all three jobs, including synthetic Chromium workflows and full-stack desktop/mobile tests through Next.js, NestJS and disposable PostgreSQL. Local Playwright could not launch because Chromium is not installed; the Python suite also could not run locally because `pytest` is absent, and both CI suites passed. See [Step97 details](step97-student-dashboard.md). Synthetic data only; no deployment, live AI, efficacy claim, or release readiness.
 
-**Next task pointer: Step98 — Analytics Engine.**
+**Next task pointer: Step111 — Resolve the PDF and HTML report semantic accessibility gap with a standards-supported tagged structure and independent assistive-technology review plan; retain NO-GO until evidence is reviewed.**

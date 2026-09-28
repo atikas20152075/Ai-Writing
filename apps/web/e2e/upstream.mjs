@@ -7,6 +7,10 @@ const id='11111111-1111-4111-8111-111111111111',pending='22222222-2222-4222-8222
 const student='33333333-3333-4333-8333-333333333333',batch='44444444-4444-4444-8444-444444444444';
 const program='55555555-5555-4555-8555-555555555555',topic='66666666-6666-4666-8666-666666666666';
 const result={assessmentId:id,status:'FINALIZED',result:{revisionId:id,revisionNo:1,source:'HUMAN',totalScore:'6',totalMarks:'10',factorResults:[{factorId:'content',criterionId:'supported',proposedScore:'6',rationale:'Synthetic approved fixture: relevant ideas with room for development.',evidence:[{exactQuote:'I enjoy reading.',claim:'Synthetic evidence fixture.'}]}]}};
+const reportSnapshot={schemaVersion:'rubric-report-v2',assessmentId:id,scoreRevisionId:id,revisionNo:1,
+ rubricVersionId:'synthetic-rubric-v1',source:'HUMAN',language:'ENGLISH',topicTitle:'Synthetic topic',
+ totalScore:'6',totalMarks:'10',factorResults:result.result.factorResults,
+ disclaimer:'Synthetic report snapshot; not an academic report.'};
 const approved={assessmentId:id,studentId:student,programId:program,topicTitle:'The joy of reading · synthetic fixture',status:'FINALIZED',effectiveRevisionId:id,revisionNo:1,resultSource:'HUMAN',totalScore:'6',totalMarks:'10'};
 const awaiting={assessmentId:pending,studentId:student,programId:program,topicTitle:'A new attempt · synthetic fixture',status:'AWAITING_UNDERSTANDING',effectiveRevisionId:null,totalScore:null,totalMarks:null};
 function issue(role){const access='access-'+randomUUID(),refresh='refresh-'+randomUUID();sessions.set(access,role);refreshes.set(refresh,{role,access});return {access,refresh};}
@@ -50,5 +54,6 @@ createServer(async(req,res)=>{
   groups:[{rubricVersionId:'77777777-7777-4777-8777-777777777777',rubricVersion:1,writingType:'PARAGRAPH',language:'ENGLISH',suppressed:false,assessmentCount:6,finalizedCount:5,representedLearnerCount:5,
    notFinalizedCount:1,unavailableResultCount:0,totalMarks:'10',meanScore:'7.5',minimumScore:'6',maximumScore:'9'}]});return;}
  if(path===`reports/assessments/${id}/pdf`&&role!=='SUPER_ADMIN'){res.writeHead(200,{'Content-Type':'application/pdf','Content-Language':'en'});res.end('%PDF-1.4\nSynthetic transport fixture, not an academic report.\n%%EOF');return;}
+ if(path===`reports/assessments/${id}/snapshot`&&role!=='SUPER_ADMIN'){send(reportSnapshot,200,{'Content-Language':'en'});return;}
  send({},404);
 }).listen(3011,'127.0.0.1');

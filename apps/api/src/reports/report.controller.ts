@@ -20,4 +20,15 @@ export class ReportController{
   res.setHeader('X-Score-Revision-Id',out.revisionId);
   return new StreamableFile(out.pdf);
  }
+ @Get(':id/snapshot')async snapshot(@Req()req:AuthenticatedRequest,
+  @Param('id',new ParseUUIDPipe())id:string,@Res({passthrough:true})res:Response){
+  await this.limiter.charge(req.actor.userId);
+  const out=await this.reports.reportSnapshot(req.actor,id);
+  res.setHeader('Content-Type','application/json; charset=utf-8');
+  res.setHeader('Cache-Control','private, no-store, max-age=0');
+  res.setHeader('X-Content-Type-Options','nosniff');
+  res.setHeader('Content-Language',out.language==='BANGLA'?'bn-BD':'en');
+  res.setHeader('X-Score-Revision-Id',out.revisionId);
+  return out.snapshot;
+ }
 }

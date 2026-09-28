@@ -26,6 +26,9 @@ test('student signs in, submits original writing, sees pending and approved resu
 test('parent sees linked assessments with pagination and current PDF download',async({page},info)=>{
  await login(page,'parent');await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
  await page.getByRole('button',{name:'View result'}).click();await expect(page.getByText('Synthetic approved fixture:',{exact:false})).toBeVisible();
+ const reportPromise=page.context().waitForEvent('page');await page.getByRole('link',{name:'Accessible report'}).click();
+ const report=await reportPromise;await expect(report.getByRole('heading',{name:'Synthetic topic'})).toBeVisible();
+ await expect(report.locator('main.accessible-report')).toHaveAttribute('lang','en');await report.close();
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'Download report'}).click();expect((await download).suggestedFilename()).toMatch(/writing-report-en-/);
  await page.screenshot({path:info.outputPath('parent-dashboard.png'),fullPage:true});
  await page.getByRole('button',{name:'Next page'}).click();await expect(page.getByText('A new attempt · synthetic fixture')).toBeVisible();
@@ -40,7 +43,7 @@ test('teacher discovers assigned cohorts without entering private identifiers',a
  await expect(page.getByText('English paragraph · Rubric v1',{exact:true})).toBeVisible();
  await expect(page.getByText(/rubric versions are reported separately/)).toBeVisible();
  await expect(page.getByText('The joy of reading · synthetic fixture')).toBeVisible();
- await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'Download PDF',exact:true})).toBeEnabled();
  await page.screenshot({path:info.outputPath('teacher-dashboard.png'),fullPage:true});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBeTruthy();
 });

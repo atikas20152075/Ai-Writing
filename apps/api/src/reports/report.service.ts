@@ -10,8 +10,13 @@ import {renderReportPdf} from './report-pdf.ts';
 @Injectable()
 export class ReportService{
  constructor(@Inject(PrismaService)private readonly db:PrismaService){}
- async pdfReport(actor:Actor,assessmentId:string){
-  return this.db.$transaction(async tx=>{
+ async reportSnapshot(actor:Actor,assessmentId:string,auditAction='REPORT_SNAPSHOT_VIEWED',
+  renderPdf?: (snapshot:Awaited<ReturnType<typeof reportFromApprovedSource>>)=>Promise<Buffer>){
+  // Parallel opens can race on immutable snapshot/receipt writes under
+  // Serializable isolation. Retry only Prisma's explicit serialization error;
+  // every retry rechecks current scope and effective revision from scratch.
+  for(let attempt=0;attempt<3;attempt++){
+   try{return await this.db.$transaction(async tx=>{
    const row=await authorizedReport(tx,actor,assessmentId);
    let snapshot;
    try{
@@ -24,24 +29,19 @@ export class ReportService{
     if(error instanceof ReportPolicyError)throw new ConflictException(error.code);
     throw error;
    }
-   // Printable bytes are generated BEFORE persisting a success record.
-   let pdf:Buffer;
-   try{pdf=await renderReportPdf(snapshot);}catch(error){
+   // Keep PDF rendering before the success record and invalidation receipt commit.
+   let pdf:Buffer|undefined;
+   if(renderPdf){try{pdf=await renderPdf(snapshot);}catch(error){
     if(error instanceof ReportPolicyError)throw new ConflictException(error.code);
     throw error;
-   }
+   }}
    const sha=reportHash(snapshot),formatVersion=reportFormatVersion(snapshot.language);
-   const existing=await tx.reportSnapshot.findUnique({where:{assessmentId_scoreRevisionId_formatVersion:{
-     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}}});
-   if(existing){
-    if(existing.snapshotHash!==sha)
-     throw new ConflictException('REPORT_FORMAT_VERSION_CONFLICT');
-   }else{
-    await tx.reportSnapshot.create({data:{assessmentId:row.assessmentId,
-      scoreRevisionId:row.scoreRevisionId,formatVersion,
-      snapshot:snapshot as unknown as Prisma.InputJsonValue,snapshotHash:sha,
-      createdById:actor.userId}});
-   }
+   const stored=await tx.reportSnapshot.upsert({where:{assessmentId_scoreRevisionId_formatVersion:{
+     assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion}},
+    create:{assessmentId:row.assessmentId,scoreRevisionId:row.scoreRevisionId,formatVersion,
+     snapshot:snapshot as unknown as Prisma.InputJsonValue,snapshotHash:sha,createdById:actor.userId},
+    update:{},select:{snapshotHash:true}});
+   if(stored.snapshotHash!==sha)throw new ConflictException('REPORT_FORMAT_VERSION_CONFLICT');
    // Step91 opt-in worker may already have BLOCKED this target. A real snapshot
    // exists now, so revive and resolve only this exact effective revision.
    const receipt=await tx.derivedProjectionInvalidation.findUnique({where:{
@@ -58,10 +58,24 @@ export class ReportService{
     await tx.derivedProjectionInvalidation.update({where:{id:receipt.id},data:{
       status:'REBUILT',errorCode:null,processedAt:new Date()}});
    }
-   await tx.auditEvent.create({data:{actorId:actor.userId,action:'REPORT_PDF_GENERATED',
+   await tx.auditEvent.create({data:{actorId:actor.userId,action:auditAction,
      resourceType:'Assessment',resourceId:row.assessmentId,
      details:{revisionId:row.scoreRevisionId,snapshotHash:sha,formatVersion,language:snapshot.language}}});
-   return {pdf,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion};
-  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
+   return {snapshot,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion,
+    ...(pdf?{pdf}:{})};
+   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
+   }catch(error){
+    if(!(error instanceof Prisma.PrismaClientKnownRequestError)||error.code!=='P2034'||attempt===2)throw error;
+    await new Promise(resolve=>setTimeout(resolve,15*(attempt+1)));
+   }
+  }
+  throw new ConflictException('REPORT_RETRY_EXHAUSTED');
+ }
+ async pdfReport(actor:Actor,assessmentId:string){
+  // The PDF renders before its snapshot receipt commits, using the same
+  // current-scope authorization and audit path as the HTML report.
+  const out=await this.reportSnapshot(actor,assessmentId,'REPORT_PDF_GENERATED',renderReportPdf);
+  if(!out.pdf)throw new ConflictException('REPORT_RENDER_FAILED');
+  return {...out,pdf:out.pdf};
  }
 }

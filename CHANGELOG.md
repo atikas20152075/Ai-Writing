@@ -29,3 +29,15 @@
 - Added a minimal effective-score summary to the student-only, no-store submissions endpoint; pending assessments expose no score.
 - Added synthetic desktop/mobile and full-stack coverage for dashboard status, current score revision, own-record scope, and private caching.
 - Next task: Step 98 — Analytics Engine.
+# Step 109 — Accessible HTML report alternative
+
+- Added an authorized structured HTML report page with language-aware content and print/save controls, linked from finalized student/parent results and academic cohort rows.
+- Added a rate-limited, no-store report snapshot route through the fixed-upstream portal gateway; it reuses current scope checks, immutable score revision snapshots and audit logging.
+- Kept PDF generation before receipt commit and preserved its existing audit action and response verification.
+- Added BFF snapshot route coverage; see `docs/step109-accessible-html-report.md` for verification and remaining accessibility review gates.
+# Step 110 — Accessible report authorization coverage
+
+- Added full-stack browser assertions for student, linked parent, and assigned teacher access to the HTML report, English/Bangla language, updated approved revisions, unrelated learners, and access revocation.
+- Made immutable snapshot persistence concurrency-safe with an atomic upsert; updated synthetic upstream and teacher PDF control checks for the added accessible report action.
+- Added bounded retries for Prisma serialization conflicts. Each attempt repeats report authorization and resolves the current effective revision before writing.
+- Local PostgreSQL-backed browser execution remains pending exact-head CI because this workspace has no PostgreSQL/container runtime. See `docs/step110-accessible-report-e2e.md`.
