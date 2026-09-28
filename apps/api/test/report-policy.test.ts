@@ -23,6 +23,8 @@ test('English PDF has a structure tree, embedded Noto font, and declared languag
  assert.match(bytes,/\/StructTreeRoot/); assert.match(bytes,/\/MarkInfo/);
  assert.match(bytes,/\/FontFile2/); assert.match(bytes,/\/ToUnicode/);
  assert.match(bytes,/\/Lang \(en-US\)/);
+ assert.match(bytes,/\/Metadata/); assert.match(bytes,/\/DisplayDocTitle/);
+ assert.ok(pdf.subarray(0,8).toString('ascii').startsWith('%PDF-1.7'));
  assert.ok(pdf.length>1000);
 });
 test('Bangla PDF has tagged structure, language metadata, and exact selectable text',async()=>{
@@ -36,6 +38,8 @@ test('Bangla PDF has tagged structure, language metadata, and exact selectable t
  assert.match(bytes,/\/StructTreeRoot/); assert.match(bytes,/\/MarkInfo/);
  assert.match(bytes,/\/FontFile2/); assert.match(bytes,/\/ToUnicode/);
  assert.ok(pdf.length>1000);
+ assert.match(bytes,/\/Metadata/); assert.match(bytes,/\/DisplayDocTitle/);
+ assert.ok(pdf.subarray(0,8).toString('ascii').startsWith('%PDF-1.7'));
  const {execFileSync}=await import('node:child_process');
  const extracted=execFileSync('pdftotext',['-raw','-','-'],{input:pdf,maxBuffer:8*1024*1024}).toString();
  const normalize=(value:string)=>value.normalize('NFC').replace(/\s+/gu,'');
