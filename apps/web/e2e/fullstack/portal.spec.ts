@@ -146,7 +146,7 @@ test('real submission, independent human approval, linked-family privacy and liv
   await expect(staffReport.locator('main.accessible-report')).toHaveAttribute('lang','en');
   await expect(staffReport.getByText('4 / 4',{exact:true})).toBeVisible();
   await staffReport.close();
-  await expect(page.getByRole('button',{name:'Download report',exact:true})).toBeEnabled();
+  await expect(page.getByRole('button',{name:'Download PDF',exact:true})).toBeEnabled();
   fixture('revoke-teacher',{userId:f.teacherId,assignmentId:f.assignmentId});
   expect((await get(page,`academic/cohorts/${f.batchId}/assessments`)).status).toBe(404);
   expect((await get(page,`reports/assessments/${record.assessmentId}/pdf`)).status).toBe(404);

@@ -12,7 +12,11 @@ export class ReportService{
  constructor(@Inject(PrismaService)private readonly db:PrismaService){}
  async reportSnapshot(actor:Actor,assessmentId:string,auditAction='REPORT_SNAPSHOT_VIEWED',
   renderPdf?: (snapshot:Awaited<ReturnType<typeof reportFromApprovedSource>>)=>Promise<Buffer>){
-  return this.db.$transaction(async tx=>{
+  // Parallel opens can race on immutable snapshot/receipt writes under
+  // Serializable isolation. Retry only Prisma's explicit serialization error;
+  // every retry rechecks current scope and effective revision from scratch.
+  for(let attempt=0;attempt<3;attempt++){
+   try{return await this.db.$transaction(async tx=>{
    const row=await authorizedReport(tx,actor,assessmentId);
    let snapshot;
    try{
@@ -59,7 +63,13 @@ export class ReportService{
      details:{revisionId:row.scoreRevisionId,snapshotHash:sha,formatVersion,language:snapshot.language}}});
    return {snapshot,revisionId:row.scoreRevisionId,snapshotHash:sha,language:snapshot.language,formatVersion,
     ...(pdf?{pdf}:{})};
-  },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
+   },{isolationLevel:Prisma.TransactionIsolationLevel.Serializable,timeout:15000});
+   }catch(error){
+    if(!(error instanceof Prisma.PrismaClientKnownRequestError)||error.code!=='P2034'||attempt===2)throw error;
+    await new Promise(resolve=>setTimeout(resolve,15*(attempt+1)));
+   }
+  }
+  throw new ConflictException('REPORT_RETRY_EXHAUSTED');
  }
  async pdfReport(actor:Actor,assessmentId:string){
   // The PDF renders before its snapshot receipt commits, using the same
