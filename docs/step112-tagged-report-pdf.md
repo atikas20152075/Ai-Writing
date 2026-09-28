@@ -1,4 +1,6 @@
-# Step 112 — Tagged bilingual report PDF (development)
+# Step 112 — Tagged bilingual report PDF (rejected experiment)
+
+> Historical: the LibreOffice candidate described below was superseded in Step 113 after veraPDF found that Bangla glyphs lacked Unicode mappings. The current generator is the untagged ReportLab implementation from Step 111. Do not use this page as evidence that the current PDF is tagged or PDF/UA conformant.
 
 ## Renderer and output
 
@@ -6,7 +8,7 @@ Replaced the untagged ReportLab renderer with LibreOffice Writer's command-line 
 
 Report title and section headings are emitted as heading elements, approved evidence is emitted as a list, and other content is emitted as paragraphs. The HTML-to-ODT import path treated the first HTML `h1` as a paragraph, so the bounded conversion step promotes that exact first title paragraph to ODT Heading 1 before PDF export. The ODT language and text styles are set to `en-US` or `bn-BD`; licensed bundled Noto Sans Bengali Regular/Bold fonts are made available through a temporary font directory. The output is refused if it lacks a PDF structure tree, marked-content flag, or expected document language.
 
-Local generated-PDF checks verify `/StructTreeRoot`, `/H1`, `/H2`, list/list-item tags, language metadata, embedded font data, text extraction, and multi-page output. The real viewer output is tagged structurally. That is not an assertion of PDF/UA conformance or user accessibility: a standards validator and independent reviewer still need to inspect the complete output.
+Local generated-PDF checks verified `/StructTreeRoot`, `/H1`, `/H2`, list/list-item tags, language metadata, embedded font data, text extraction, and multi-page output. Subsequent validation with veraPDF 1.30.2 found the English sample passed PDF/UA-1, but the Bangla sample failed PDF/UA-1 and PDF/UA-2. The PDF/UA-1 report recorded 148 failed checks for missing glyph-to-Unicode mappings under ISO 14289-1:2014 clause 7.21.7. Visual appearance was correct, but text extraction reordered/split Bangla glyphs. The candidate is therefore rejected for bilingual use.
 
 ## Observed limitation and required review
 
@@ -20,4 +22,5 @@ The API PDF path now requires LibreOffice Writer (`soffice`) at runtime, configu
 
 Sources: [LibreOffice PDF CLI export options](https://help.libreoffice.org/latest/en-US/text/shared/guide/pdf_params.html) and [LibreOffice PDF/UA export](https://help.libreoffice.org/latest/en-US/text/shared/01/ref_pdf_export_universal_accessibility.html). The export option produces tagged structure, but external semantic, reading-order, bilingual and assistive-technology review remain required.
 
-Verification: local `npm run test:assessment` passes 35 tests using the available LibreOffice Writer binary, and API typecheck passes. PR #36 exact-head synthetic CI [36364932880](https://github.com/atikas20152075/Ai-Writing/actions/runs/36364932880) and post-merge main CI [36365206897](https://github.com/atikas20152075/Ai-Writing/actions/runs/36365206897) both passed all three jobs (backend integration, web portal, and database-backed desktop/mobile browser tests). These checks do not close the independent accessibility or production gates.
+
+PR #36 exact-head synthetic CI [36364932880](https://github.com/atikas20152075/Ai-Writing/actions/runs/36364932880) and post-merge main CI [36365206897](https://github.com/atikas20152075/Ai-Writing/actions/runs/36365206897) passed all three jobs. Those code tests did not detect the Unicode mapping failure. See [Step 113 validation](step113-renderer-validation.md) for current status and next acceptance gates.

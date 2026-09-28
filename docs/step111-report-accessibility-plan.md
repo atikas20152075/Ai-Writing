@@ -1,14 +1,14 @@
 # Step 111 — Report semantics and independent accessibility review
 
-## Step 111 result (superseded by Step 112)
+## Step 111 result (PDF generator restored in Step 113)
 
-The PDF generator no longer writes `/MarkInfo /Marked true` without a PDF logical structure tree. That flag could imply tagging that the output does not contain. English and Bangla PDFs continue to declare `/Lang`, embed the licensed Noto fonts and retain selectable text. A regression test verifies the language and fonts while asserting that the output contains neither `/MarkInfo` nor `/StructTreeRoot`; this is an explicit check that the current PDF is **not tagged**. No PDF/UA claim is made.
+The PDF generator does not write `/MarkInfo /Marked true` without a PDF logical structure tree. That flag could imply tagging that the output does not contain. English and Bangla PDFs declare `/Lang`, embed the licensed Noto fonts and retain selectable text. The Step 113 regression verifies the language and fonts while asserting that the current PDF contains neither `/MarkInfo` nor `/StructTreeRoot`; this is an explicit check that the current PDF is **not tagged**. No PDF/UA claim is made.
 
 The HTML report remains the semantic alternative: it uses a language-tagged `<main>`, a report `<article>`, headings, `<dl>` metadata, sections, and evidence lists. Step 110's synthetic desktop/mobile browser coverage checks report content and authorization. Neither that coverage nor this code review substitutes for testing with assistive technology or users.
 
 ## Tagged PDF implementation route
 
-The repository uses the open-source ReportLab API. ReportLab's own accessibility documentation says tagged-PDF generation is available in its commercial ReportLab Plus product, not the open-source framework. Its documented route is to emit a real structure tree, map semantic content such as headings and paragraphs, and validate the resulting tags. We will not hand-write PDF structure objects into the current generator: parent-tree mappings, marked-content references, reading order, and role mappings must stay mutually consistent. The renderer choice, licensing and deployment support must be resolved before replacing the current PDF path.
+The repository uses the open-source ReportLab API. ReportLab's own accessibility documentation says tagged-PDF generation is available in its commercial ReportLab Plus product, not the open-source framework. Its documented route is to emit a real structure tree, map semantic content such as headings and paragraphs, and validate the resulting tags. We will not hand-write PDF structure objects into the current generator: parent-tree mappings, marked-content references, reading order, and role mappings must stay mutually consistent. Step 112 tested LibreOffice Writer but veraPDF later found missing Bangla glyph-to-Unicode mappings; Step 113 rejects that candidate for bilingual use and restores this untagged renderer. The renderer choice, licensing and deployment support must be resolved before replacing the current PDF path.
 
 For a selected renderer, acceptance requires all of the following before calling the PDF tagged:
 
@@ -34,6 +34,6 @@ Log findings with reproducible steps and severity. Fix critical and serious barr
 
 ## Release boundary
 
-Step 111 removed a misleading PDF tagging flag and recorded implementable validation criteria. Step 112 below records the renderer integration that followed. Independent assistive-technology review remains open. Keep the Step 92 accessibility checkbox open and production status NO-GO until PDF structure is independently validated, HTML/PDF review findings are resolved and recorded, and all other release gates pass. Use synthetic reports only until all release gates pass.
+Step 111 removed a misleading PDF tagging flag and recorded implementable validation criteria. Step 112's LibreOffice experiment was rejected in Step 113 after Bangla Unicode mapping failures. Independent assistive-technology review remains open. Keep the Step 92 accessibility checkbox open and production status NO-GO until a bilingual tagged PDF structure is independently validated, HTML/PDF review findings are resolved and recorded, and all other release gates pass. Use synthetic reports only until all release gates pass.
 
 Verification: `npm run test:assessment` passes all 35 tests, including the PDF metadata regression; `npm run typecheck:api` and `git diff --check` pass. Exact-head CI evidence must still be recorded; local success alone does not close external review gates.
