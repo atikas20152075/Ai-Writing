@@ -270,6 +270,7 @@ model Submission {
   rubricHash     String @db.VarChar(64)
   status         SubmissionStatus @default(ACCEPTED)
   createdAt      DateTime @default(now())
+  dataExpiresAt  DateTime @default(dbgenerated("date_trunc('milliseconds', CURRENT_TIMESTAMP + INTERVAL '6 years')"))
   student        Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
   program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
   batch          Batch @relation(fields: [batchId], references: [id], onDelete: Restrict)
@@ -280,6 +281,7 @@ model Submission {
   rewriteOfRevision AssessmentScoreRevision? @relation("RewriteRevision", fields: [rewriteOfRevisionId, rewriteOfAssessmentId], references: [id, assessmentId], onDelete: Restrict)
   @@unique([studentId, clientRequestId], map: "Submission_student_request_unique")
   @@index([studentId, programId, createdAt])
+  @@index([dataExpiresAt, id], map: "Submission_retention_due_idx")
   @@index([rewriteOfAssessmentId, rewriteOfRevisionId])
 }
 model VerifiedWritingText {
