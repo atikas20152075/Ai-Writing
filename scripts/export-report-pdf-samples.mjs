@@ -8,7 +8,7 @@ await mkdir(output,{recursive:true});
 
 const base={assessmentId:'10000000-0000-4000-8000-000000000001',
  scoreRevisionId:'20000000-0000-4000-8000-000000000001',revisionNo:1,
- rubricVersionId:'30000000-0000-4000-8000-000000000001',source:'HUMAN',
+ rubricVersionId:'30000000-0000-4000-8000-000000000001',source:'HUMAN',language:'ENGLISH',
  topicSnapshot:{title:'Synthetic Reading Exercise'},totalScore:'2',totalMarks:'4',
  factorResults:[{factorId:'content',criterionId:'c2',proposedScore:'2',
   rationale:'Approved synthetic interpretation.',evidence:[{exactQuote:'books'}]}]};
