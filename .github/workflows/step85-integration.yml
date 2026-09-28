@@ -40,10 +40,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install bounded Bangla PDF shaping dependencies
-        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
-      - name: Install PDF text extraction validator
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
+      - name: Install PDF/UA renderer and text extraction tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils
       - name: Create CI-only ephemeral secrets
         shell: bash
         run: |
@@ -151,8 +149,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install bounded Bangla PDF shaping dependencies
-        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
+      - name: Install PDF/UA renderer
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer poppler-utils
       - name: Install locked dependencies and migrate disposable browser database
         run: |
           npm ci --no-audit --no-fund
