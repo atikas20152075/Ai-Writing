@@ -270,7 +270,7 @@ model Submission {
   rubricHash     String @db.VarChar(64)
   status         SubmissionStatus @default(ACCEPTED)
   createdAt      DateTime @default(now())
-  dataExpiresAt  DateTime
+  dataExpiresAt  DateTime @default(dbgenerated("(CURRENT_TIMESTAMP + '6 years'::interval)"))
   student        Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
   program        AcademicProgram @relation(fields: [programId], references: [id], onDelete: Restrict)
   batch          Batch @relation(fields: [batchId], references: [id], onDelete: Restrict)
