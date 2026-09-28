@@ -1,4 +1,4 @@
-# Optional local dependencies. Docker was unavailable during Step 83 preparation.
+# Local-development dependencies. API and portal run as host processes.
 services:
   postgres:
     image: postgres:17-alpine
