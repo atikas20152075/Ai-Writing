@@ -2,6 +2,7 @@ import {chromium,type Browser} from 'playwright';
 import {createRequire} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import {reportLines,ReportPolicyError,type PrintableReport} from './report-policy.ts';
+import {createSingleFlightRunner} from './report-render-limiter.ts';
 
 const require=createRequire(import.meta.url);
 const {PDFDocument,PDFName,PDFNumber,PDFDict,PDFRawStream,decodePDFRawStream}=require('pdf-lib') as any;
@@ -97,7 +98,7 @@ export async function repairTaggedPdf(pdf:Buffer,report:PrintableReport):Promise
 }
 
 /** Print approved content through Chromium with semantic HTML and explicit tagged output. */
-export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
+async function renderReportPdfUnbounded(report:PrintableReport):Promise<Buffer>{
  if(report.schemaVersion!=='rubric-report-v2'||!['BANGLA','ENGLISH'].includes(report.language))
   throw new ReportPolicyError('REPORT_FORMAT_UNSUPPORTED');
  const lines=reportLines(report);
@@ -141,3 +142,7 @@ export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
   if(browser)await browser.close().catch(()=>undefined);
  }
 }
+
+// One Chromium render at a time per API process. This bound is process-local;
+// production capacity still requires measurement with the target deployment.
+export const renderReportPdf=createSingleFlightRunner(renderReportPdfUnbounded);
