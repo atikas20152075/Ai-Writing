@@ -1,4 +1,4 @@
-import {test,expect,type Page} from '@playwright/test';
+import {test,expect,type Page,type Route} from '@playwright/test';
 import {execFileSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {readFile} from 'node:fs/promises';
@@ -133,12 +133,31 @@ test('real submission, independent human approval, linked-family privacy and liv
   await expect(currentReport.getByText('4 / 4',{exact:true})).toBeVisible();
   await expect(currentReport.getByText('2',{exact:true})).toBeVisible();
   await currentReport.close();
+  let releasePdf!:()=>void,startedPdf!:()=>void;
+  const pdfGate=new Promise<void>(resolve=>{releasePdf=resolve;});
+  const pdfStarted=new Promise<void>(resolve=>{startedPdf=resolve;});
+  const pdfPath=`**/api/portal/reports/assessments/${record.assessmentId}/pdf`;
+  const delayedPdf=async(route:Route)=>{
+    const response=await route.fetch();startedPdf();await pdfGate;await route.fulfill({response});
+  };
+  await page.route(pdfPath,delayedPdf);
   const downloadEvent=page.waitForEvent('download');
   await page.getByRole('button',{name:'Download report'}).click();
+  await pdfStarted;
+  const downloadButton=page.getByRole('button',{name:'Preparing report…'});
+  await expect(downloadButton).toBeDisabled();
+  await expect(page.getByRole('status')).toContainText('Preparing your approved report download');
+  releasePdf();
   const download=await downloadEvent;expect(await download.failure()).toBeNull();
   expect(download.suggestedFilename()).toMatch(/writing-report-en-/);
   const pdf=await readFile((await download.path())!);expect(pdf.subarray(0,5).toString()).toBe('%PDF-');
   expect(pdf.length).toBeGreaterThan(500);
+  await page.unroute(pdfPath,delayedPdf);
+  await page.route(pdfPath,route=>route.fulfill({status:503,contentType:'application/json',body:'{"error":"synthetic failure"}'}));
+  await page.getByRole('button',{name:'Download report'}).click();
+  await expect(page.getByRole('status')).toContainText('We could not complete this request. Please try again.');
+  await expect(page.getByRole('button',{name:'Download report'})).toBeEnabled();
+  await page.unroute(pdfPath);
   fixture('revoke-parent',{userId:f.parentId,rootId:f.rootId,linkId:f.linkId});
   expect((await get(page,detail)).status).toBe(404);
   expect((await get(page,`reports/assessments/${record.assessmentId}/pdf`)).status).toBe(404);
