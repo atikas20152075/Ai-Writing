@@ -20,7 +20,8 @@ The merged Step92 milestone is **synthetic-tested development-only**. This check
 - [ ] Define immutable revision-linked report artifact versioning, supersession, revocation limitations for already downloaded reports, and lifecycle retention/deletion/reconciliation that do not erase mandated immutable academic audit evidence.
 - [ ] Run penetration testing, authorization IDOR/revocation races, high-concurrency load testing and disaster-recovery exercises with published acceptance thresholds.
 - [ ] Obtain child-data/legal/privacy review, vendor/cross-border approvals and expert-adjudicated Bangla/English scoring and OCR benchmark evidence before AI release gate activation.
-- [ ] Build and test parent/teacher/student UIs; offer accessible download state, refusal and review pathways without exposing private data.
+- [x] Build synthetic development parent/teacher/student UIs with scoped report access, review flows, and a semantic report download control; Step 120 adds explicit download progress/error announcements and browser coverage.
+- [ ] Validate the complete UI and refusal/review pathways with independent assistive-technology reviewers and production-like authorization/security tests.
 - [ ] Independently validate a production-like staging deploy with secret management, redaction-safe logs, metrics, alerting, worker retries, RPO/RTO and rollback evidence.
 
 **No real student data in CI, synthetic tests, examples or unapproved AI prompts.**
