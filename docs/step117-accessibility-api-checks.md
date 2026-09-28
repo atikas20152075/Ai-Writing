@@ -1,8 +1,8 @@
-# Step 117 — Browser accessibility API checks (in progress)
+# Step 117 — Browser accessibility API checks (merged and CI verified)
 
 Added synthetic full-stack checks that inspect Chromium's exposed accessibility tree for both English and Bangla report flows. The checks assert the report's `main`, `article`, and navigation landmarks; a heading outline; named back and print controls; and exposed evidence list/list-item roles. The report container's language is checked as `en` or `bn`.
 
-Local web TypeScript typecheck and `git diff --check` pass. This workspace does not have Chromium installed, so the CDP tree assertions have not run locally; exact-head CI must execute them before this change is accepted. The current check is a browser accessibility-API smoke test, not a WCAG audit or screen-reader usability review.
+Local web TypeScript typecheck and `git diff --check` passed. Exact-head CI [run 36388265717](https://github.com/atikas20152075/Ai-Writing/actions/runs/36388265717) passed all three jobs, including the desktop/mobile Chromium full-stack report flows and the backend's fresh PDF/UA-1 validation. PR #42 merged to `main` as `b063560f66f1ea35c797473443d541e93c17ca12`. The browser check is an accessibility-API smoke test, not a WCAG audit or screen-reader usability review.
 
 ## Still required to close accessibility
 
