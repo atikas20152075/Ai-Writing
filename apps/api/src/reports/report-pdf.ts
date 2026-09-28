@@ -1,4 +1,4 @@
-import {chromium} from 'playwright';
+import {chromium,type Browser} from 'playwright';
 import {createRequire} from 'node:module';
 import {readFile} from 'node:fs/promises';
 import {reportLines,ReportPolicyError,type PrintableReport} from './report-policy.ts';
@@ -6,7 +6,7 @@ import {reportLines,ReportPolicyError,type PrintableReport} from './report-polic
 const require=createRequire(import.meta.url);
 const regular=require.resolve('@expo-google-fonts/noto-sans-bengali/400Regular/NotoSansBengali_400Regular.ttf');
 const bold=require.resolve('@expo-google-fonts/noto-sans-bengali/700Bold/NotoSansBengali_700Bold.ttf');
-const MAX_BYTES=8*1024*1024,MAX_INPUT=2*1024*1024,TIMEOUT_MS=15_000;
+const MAX_BYTES=8*1024*1024,MAX_INPUT=2*1024*1024,TIMEOUT_MS=8_000;
 
 function escapeHtml(value:string):string{
  return value.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -39,35 +39,41 @@ function markup(report:PrintableReport,regularBase64:string,boldBase64:string):s
   </style></head><body>${body}</body></html>`;
 }
 
-/** Print the approved report through Chromium with semantic HTML and explicit tagged output. */
+/** Print approved content through Chromium with semantic HTML and explicit tagged output. */
 export async function renderReportPdf(report:PrintableReport):Promise<Buffer>{
  if(report.schemaVersion!=='rubric-report-v2'||!['BANGLA','ENGLISH'].includes(report.language))
   throw new ReportPolicyError('REPORT_FORMAT_UNSUPPORTED');
  const lines=reportLines(report);
  if(lines.length>1000)throw new ReportPolicyError('REPORT_TOO_LARGE');
  const lang=report.language==='BANGLA'?'bn-BD':'en-US';
- const inputBytes=Buffer.byteLength(JSON.stringify({lang,lines}));
- if(inputBytes>MAX_INPUT)throw new ReportPolicyError('REPORT_TOO_LARGE');
- let browser;
- let timeout:ReturnType<typeof setTimeout>|undefined;
+ if(Buffer.byteLength(JSON.stringify({lang,lines}))>MAX_INPUT)
+  throw new ReportPolicyError('REPORT_TOO_LARGE');
+ let browser:Browser|undefined,timeout:ReturnType<typeof setTimeout>|undefined,timedOut=false;
  try{
-  browser=await chromium.launch({headless:true,timeout:TIMEOUT_MS,
-   args:process.getuid?.()===0?['--no-sandbox','--disable-setuid-sandbox']:[]});
-  const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block'});
-  const page=await context.newPage();
-  await page.route('**/*',route=>route.request().url()==='about:blank'?route.continue():route.abort());
-  const html=markup(report,(await readFile(regular)).toString('base64'),(await readFile(bold)).toString('base64'));
-  await page.setContent(html,{waitUntil:'load',timeout:TIMEOUT_MS});
-  await page.evaluate(()=>document.fonts.ready);
+  const rendering=(async()=>{
+   const launched=await chromium.launch({headless:true,timeout:TIMEOUT_MS,
+    args:process.getuid?.()===0?['--no-sandbox','--disable-setuid-sandbox']:[]});
+   if(timedOut){await launched.close();throw new ReportPolicyError('REPORT_RENDER_TIMEOUT');}
+   browser=launched;
+   const context=await browser.newContext({javaScriptEnabled:false,serviceWorkers:'block'});
+   try{
+    const page=await context.newPage();
+    await page.route('**/*',route=>route.request().url()==='about:blank'?route.continue():route.abort());
+    const html=markup(report,(await readFile(regular)).toString('base64'),(await readFile(bold)).toString('base64'));
+    await page.setContent(html,{waitUntil:'load',timeout:TIMEOUT_MS});
+    await page.evaluate(()=>document.fonts.ready.then(()=>true));
+    return await page.pdf({format:'Letter',preferCSSPageSize:true,printBackground:true,tagged:true,outline:true});
+   }finally{await context.close().catch(()=>undefined);}
+  })();
   const pdf=await Promise.race([
-   page.pdf({format:'Letter',preferCSSPageSize:true,printBackground:true,tagged:true,outline:true}),
-   new Promise<never>((_,reject)=>{timeout=setTimeout(()=>reject(new ReportPolicyError('REPORT_RENDER_TIMEOUT')),TIMEOUT_MS);}),
+   rendering,
+   new Promise<never>((_,reject)=>{timeout=setTimeout(()=>{timedOut=true;void browser?.close();reject(new ReportPolicyError('REPORT_RENDER_TIMEOUT'));},TIMEOUT_MS);}),
   ]);
   if(pdf.length>MAX_BYTES)throw new ReportPolicyError('REPORT_TOO_LARGE');
-  const signature=pdf.subarray(0,8).toString('ascii');
   const bytes=pdf.toString('latin1');
-  if(!signature.startsWith('%PDF-')||!bytes.includes('/StructTreeRoot')||!bytes.includes('/MarkInfo')||
-   !bytes.includes(`/Lang (${lang})`))throw new ReportPolicyError('REPORT_TAGGING_MISSING');
+  if(!pdf.subarray(0,8).toString('ascii').startsWith('%PDF-')||
+   !bytes.includes('/StructTreeRoot')||!bytes.includes('/MarkInfo')||!bytes.includes(`/Lang (${lang})`))
+   throw new ReportPolicyError('REPORT_TAGGING_MISSING');
   return pdf;
  }catch(error){
   if(error instanceof ReportPolicyError)throw error;
