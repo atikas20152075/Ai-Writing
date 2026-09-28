@@ -24,6 +24,7 @@
     "test:ai-gateway": "node --experimental-strip-types --test apps/api/test/ai-gateway.test.ts",
     "test": "npm run test:domain && npm run test:policies && npm run test:ai-gateway && npm run test:static && npm run test:assessment",
     "test:python": "cd apps/ai-service && python -m pytest -q",
+    "dev:local": "bash scripts/dev-local.sh",
     "typecheck:api": "npm --workspace apps/api run typecheck",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test:static": "node --test scripts/static-invariants.test.mjs && node --test scripts/step93-frontend-static.test.mjs && node --test scripts/step93-session-behavior.test.mjs",

@@ -3,6 +3,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+.local/
 .pytest_cache/
 __pycache__/
 *.pyc

@@ -34,6 +34,6 @@ async function bootstrap(){
   app.setGlobalPrefix('api/v1');
   app.useGlobalPipes(new ValidationPipe({whitelist:true,forbidNonWhitelisted:true,transform:true,validationError:{target:false,value:false}}));
   app.enableShutdownHooks();
-  await app.listen(Number(process.env.PORT??3001),'0.0.0.0');
+  await app.listen(Number(process.env.PORT??3001),process.env.API_HOST??'0.0.0.0');
 }
 bootstrap().catch(e=>{console.error('API failed to start:',e.message);process.exit(1);});

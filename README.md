@@ -38,6 +38,14 @@
 
 Node >=22.16, npm, Python >=3.11 and isolated PostgreSQL required. Use only a disposable database whose name ends `_test` for integration tests. Never copy a production database into CI.
 
+## Run the portal locally
+
+For a loopback-only local development environment, install and start Docker Desktop/Engine, then run `npm run dev:local` from the repository root. The script creates a private `.env` with fresh local secrets when needed, starts the development PostgreSQL/Redis containers, applies Prisma migrations, and starts the NestJS API plus Next.js portal. Open `http://localhost:3000`; use Ctrl+C to stop the application processes. The local database containers remain available until stopped with `docker compose -f infra/docker-compose.dev.yml down`.
+
+This is a developer setup, not an internet-facing deployment. It does not provision accounts or learner records, and the assessment AI remains unavailable/disabled. Use only invented test writing. Chromium is needed for PDF rendering and browser checks; install it with `npx playwright install chromium` if it is not already present. Logs are written to the ignored `.local/` directory. The API and portal bind to the local machine; do not expose these ports publicly.
+
+The current development runner has no Docker/PostgreSQL binaries, so it cannot validate the full startup in this workspace. The script checks prerequisites before changing local configuration; see CI for the database-backed and browser-backed verification.
+
 ```sh
 cp .env.example .env
 # Replace all example secrets before any real environment or shared deployment.
