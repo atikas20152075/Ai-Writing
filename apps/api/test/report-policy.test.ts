@@ -40,7 +40,7 @@ test('Bangla PDF has tagged structure, language metadata, and exact selectable t
  const extracted=execFileSync('pdftotext',['-','-'],{input:pdf,maxBuffer:8*1024*1024}).toString();
  const normalize=(value:string)=>value.normalize('NFC').replace(/\s+/gu,' ').trim();
  for(const text of reportLines(report).map(line=>line.text))
-  assert.ok(normalize(extracted).includes(normalize(text)),`missing or reordered extracted text: ${text}`);
+  assert.ok(normalize(extracted).includes(normalize(text)),`missing or reordered extracted text: ${text}; extracted=${normalize(extracted)}`);
 });
 test('unsafe text controls, missing evidence, and malformed marks are refused',()=>{
  assert.throws(()=>reportFromApprovedSource({...input,topicSnapshot:{title:'safe\u202Eevil'}}),
