@@ -1,4 +1,4 @@
-# Synthetic-only Step92 API/DB/AI/teacher-scope and English report contract validation. NEVER deploy or invoke a real provider.
+# Synthetic-only Step92 API/DB/AI/teacher-scope and tagged bilingual report validation. NEVER deploy or invoke a real provider.
 name: "Backend integrity: Step 92"
 on:
   push:
@@ -40,8 +40,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install bounded Bangla PDF shaping dependencies
-        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
       - name: Install PDF text extraction validator
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Create CI-only ephemeral secrets
@@ -52,6 +50,8 @@ jobs:
           echo "LOCAL_PROVISION_PASSWORD=$(openssl rand -hex 32)" >> "$GITHUB_ENV"
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Install Chromium for tagged report rendering
+        run: npx playwright install --with-deps chromium
       - name: Block high and critical dependency advisories
         run: npm audit --audit-level=high
       - name: TypeScript domain and pure-policy checks
@@ -151,8 +151,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Install bounded Bangla PDF shaping dependencies
-        run: python -m pip install 'reportlab>=4.4.9,<5' 'uharfbuzz>=0.52,<1'
       - name: Install locked dependencies and migrate disposable browser database
         run: |
           npm ci --no-audit --no-fund
