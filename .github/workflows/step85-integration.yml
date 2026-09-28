@@ -85,6 +85,8 @@ jobs:
           /tmp/verapdf-installed/verapdf --flavour ua1 --format text
           /tmp/report-pdf-samples/report-en.pdf
           /tmp/report-pdf-samples/report-bn.pdf
+      - name: Measure synthetic PDF rendering time, output size, and process-tree RSS
+        run: node --experimental-strip-types scripts/benchmark-report-pdf.mjs /tmp/report-pdf-benchmark
       - name: Block high and critical dependency advisories
         run: npm audit --audit-level=high
       - name: TypeScript domain and pure-policy checks
@@ -133,6 +135,14 @@ jobs:
           name: step115-bilingual-pdf-samples
           path: /tmp/report-pdf-samples/*.pdf
           if-no-files-found: error
+          retention-days: 14
+      - name: Preserve synthetic PDF render resource baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step119-pdf-render-resource-baseline
+          path: /tmp/report-pdf-benchmark/report-pdf-benchmark.json
+          if-no-files-found: warn
           retention-days: 14
   web-portal:
     runs-on: ubuntu-latest
