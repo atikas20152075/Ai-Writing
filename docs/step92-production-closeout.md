@@ -13,7 +13,8 @@ The merged Step92 milestone is **synthetic-tested development-only**. This check
 - [x] Select Noto Sans Bengali 0.4.4 (font files under OFL-1.1; package also MIT), bundle Regular/Bold, and generate multilingual PDFs with embedded subset fonts. Synthetic Bangla mixed-script extraction, multi-page rendering and visual QA are recorded in Step103.
 - [ ] Independently review Bangla shaping, line wrapping and evidence quotes with expert-adjudicated fixtures; this code change does not establish reading comprehension or scoring quality.
 - [x] Add document language, selectable copy and bounded in-memory output for multilingual layouts.
-- [ ] Add a correctly validated PDF structure tree and complete screen-reader/accessibility review; output currently sets a marked-content flag but is not a tagged PDF or PDF/UA conformance claim.
+- [x] Generate a tagged PDF structure tree and pass pinned veraPDF 1.30.2 PDF/UA-1 validation for fresh synthetic English and Bangla samples (Step 116). This does not claim PDF/UA-2 conformance.
+- [ ] Complete independent screen-reader/accessibility review of HTML and PDFs, including spoken reading order, Bengali shaping-only glyph behavior, keyboard operation, and representative short/long reports. Step 117 adds automated Chromium accessibility-API assertions only.
 - [ ] Measure production performance/memory limits.
 - [ ] Provide private report artifact storage (encrypted at rest, key rotation, region/vendor approval), owner-scoped metadata, malware/content-type controls and short-lived delivery only after *fresh* educational authority verification.
 - [ ] Define immutable revision-linked report artifact versioning, supersession, revocation limitations for already downloaded reports, and lifecycle retention/deletion/reconciliation that do not erase mandated immutable academic audit evidence.
