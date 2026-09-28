@@ -25,6 +25,26 @@ async function logout(page:Page){
   await page.getByRole('button',{name:'Sign out',exact:true}).click();
   await expect(page.getByRole('button',{name:'Sign in',exact:true})).toBeEnabled();
 }
+async function expectReportAccessibilityTree(page:Page,language:'en'|'bn'){
+  const lang=await page.locator('main.accessible-report').getAttribute('lang');
+  expect(lang).toBe(language);
+  const cdp=await page.context().newCDPSession(page);
+  try{
+    const {nodes}=await cdp.send('Accessibility.getFullAXTree');
+    const exposed=nodes.filter((node:{ignored?:boolean})=>!node.ignored);
+    const roles=exposed.map((node:{role?:{value?:string}})=>node.role?.value);
+    const named=(role:string,name:string)=>exposed.some((node:{role?:{value?:string};name?:{value?:string}})=>(
+      node.role?.value===role&&node.name?.value===name));
+    expect(roles).toContain('main');
+    expect(roles).toContain('article');
+    expect(roles).toContain('navigation');
+    expect(roles.filter(role=>role==='heading').length).toBeGreaterThanOrEqual(4);
+    expect(named('button',language==='bn'?'প্রিন্ট বা PDF হিসেবে সংরক্ষণ':'Print or save as PDF')).toBe(true);
+    expect(named('link',language==='bn'?'মূল পাতায় ফিরুন':'Back to workspace')).toBe(true);
+    expect(roles).toContain('list');
+    expect(roles).toContain('listitem');
+  }finally{await cdp.detach();}
+}
 
 test('real submission, independent human approval, linked-family privacy and live scope revocation',async({page,context},info)=>{
   const f=fixture('create');
@@ -57,6 +77,7 @@ test('real submission, independent human approval, linked-family privacy and liv
   const studentReport=await studentReportPromise;
   await expect(studentReport.getByRole('heading',{name:'Books and new ideas'})).toBeVisible();
   await expect(studentReport.locator('main.accessible-report')).toHaveAttribute('lang','en');
+  await expectReportAccessibilityTree(studentReport,'en');
   await expect(studentReport.getByRole('heading',{name:'Scoring factors'})).toBeVisible();
   await expect(studentReport.getByText('Synthetic human-reviewed browser evidence:',{exact:false})).toBeVisible();
   await expect(studentReport.getByText(writing,{exact:true})).toHaveCount(0);
@@ -175,6 +196,7 @@ test('Bangla report language reaches the scoped browser download',async({page})=
   const banglaReport=await banglaReportPromise;
   await expect(banglaReport.getByRole('heading',{name:'বাংলা বই ও নতুন ধারণা'})).toBeVisible();
   await expect(banglaReport.locator('main.accessible-report')).toHaveAttribute('lang','bn');
+  await expectReportAccessibilityTree(banglaReport,'bn');
   await expect(banglaReport.getByRole('heading',{name:'দক্ষতার ক্ষেত্র'})).toBeVisible();
   await banglaReport.close();
   const report=await page.evaluate(async id=>{
